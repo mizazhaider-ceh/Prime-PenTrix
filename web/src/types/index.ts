@@ -57,6 +57,79 @@ export interface Message {
   createdAt: Date | string;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// DOCUMENT & RAG TYPES
+// ═══════════════════════════════════════════════════════════════
+
+export type DocumentStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+export type AllowedMimeType =
+  | 'application/pdf'
+  | 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  | 'text/plain'
+  | 'text/markdown';
+
+export interface Document {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: AllowedMimeType;
+  size: number;
+  fileUrl: string | null;
+  status: DocumentStatus;
+  errorMessage: string | null;
+  userId: string;
+  subjectId: string;
+  uploadedAt: Date | string;
+  processedAt: Date | string | null;
+  _count?: {
+    chunks: number;
+  };
+  subject?: {
+    id: string;
+    name: string;
+    slug: string;
+    color: string;
+    icon: string;
+  };
+}
+
+export interface DocumentChunk {
+  id: string;
+  content: string;
+  chunkIndex: number;
+  pageNumber: number | null;
+  startChar: number | null;
+  endChar: number | null;
+  documentId: string;
+  createdAt: Date | string;
+  score?: number; // Relevance score from search
+}
+
+export interface DocumentSearchResult {
+  chunk: DocumentChunk;
+  document: {
+    id: string;
+    filename: string;
+    originalName: string;
+  };
+  score: number;
+  searchType: 'semantic' | 'bm25' | 'hybrid';
+}
+
+export interface DocumentUploadResponse {
+  document: Document;
+  message: string;
+}
+
+export interface DocumentProcessingStatus {
+  documentId: string;
+  status: DocumentStatus;
+  progress: number; // 0-100
+  chunksCreated: number;
+  errorMessage: string | null;
+}
+
 // Analytics types
 export interface GlobalStats {
   id: string;

@@ -87,6 +87,33 @@ export const RAG_CONFIG = {
   minSimilarity: 0.5,
 } as const;
 
+export const DOCUMENT_CONFIG = {
+  maxFileSize: 20 * 1024 * 1024, // 20MB
+  allowedTypes: [
+    { mime: 'application/pdf', ext: '.pdf', label: 'PDF' },
+    {
+      mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ext: '.docx',
+      label: 'Word',
+    },
+    { mime: 'text/plain', ext: '.txt', label: 'Text' },
+    { mime: 'text/markdown', ext: '.md', label: 'Markdown' },
+  ],
+  acceptString: '.pdf,.docx,.txt,.md',
+  statusLabels: {
+    pending: 'Pending',
+    processing: 'Processing',
+    completed: 'Ready',
+    failed: 'Failed',
+  },
+  statusColors: {
+    pending: 'text-yellow-400',
+    processing: 'text-blue-400',
+    completed: 'text-green-400',
+    failed: 'text-red-400',
+  },
+} as const;
+
 export const SPACED_REPETITION_INTERVALS = {
   wrong: 1, // 1 day
   once: 3, // 3 days
