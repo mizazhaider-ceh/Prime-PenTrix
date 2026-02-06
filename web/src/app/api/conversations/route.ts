@@ -7,7 +7,7 @@ import { z } from 'zod';
 const createConversationSchema = z.object({
   title: z.string().min(1).max(200),
   subjectId: z.string().uuid(),
-  mode: z.enum(['chat', 'learn', 'questions', 'explain', 'summarize', 'quiz']).default('chat'),
+  mode: z.enum(['chat', 'doc-chat', 'learn', 'questions', 'explain', 'summarize', 'quiz']).default('chat'),
 });
 
 // GET /api/conversations - Fetch user's conversations

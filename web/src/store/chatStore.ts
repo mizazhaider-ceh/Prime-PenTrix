@@ -102,9 +102,16 @@ export const useChatStore = create<ChatState>((set) => ({
     set({ messages }),
 
   addMessage: (message) =>
-    set((state) => ({
-      messages: [...state.messages, message],
-    })),
+    set((state) => {
+      // Prevent duplicate messages by checking if message already exists
+      const exists = state.messages.some((m) => m.id === message.id);
+      if (exists) {
+        return state; // No change if message already exists
+      }
+      return {
+        messages: [...state.messages, message],
+      };
+    }),
 
   updateMessage: (id, updates) =>
     set((state) => ({
@@ -131,11 +138,15 @@ export const useChatStore = create<ChatState>((set) => ({
     set({ streamingMessage: '' }),
 
   finalizeStreamingMessage: (message) =>
-    set((state) => ({
-      messages: [...state.messages, message],
-      streamingMessage: '',
-      isStreaming: false,
-    })),
+    set((state) => {
+      // Prevent duplicate — if already exists, just clear streaming state
+      const exists = state.messages.some((m) => m.id === message.id);
+      return {
+        messages: exists ? state.messages : [...state.messages, message],
+        streamingMessage: '',
+        isStreaming: false,
+      };
+    }),
 
   // Filters
   setFilterSubjectId: (subjectId) =>

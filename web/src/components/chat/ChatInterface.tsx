@@ -5,7 +5,23 @@ import { useChatStore } from '@/store/chatStore';
 import ChatMessage from './ChatMessage';
 import { Send, Loader2, AlertCircle, Sparkles, MessageSquare } from 'lucide-react';
 
-export default function ChatInterface() {
+interface ChatInterfaceProps {
+  /** When true, sends useRag=true to pull document context via Brain API */
+  useRag?: boolean;
+  /** Placeholder text for the input */
+  placeholder?: string;
+  /** Title override for the empty state */
+  emptyTitle?: string;
+  /** Description override for the empty state */
+  emptyDescription?: string;
+}
+
+export default function ChatInterface({
+  useRag = false,
+  placeholder = 'Ask Prime PenTrix anything...',
+  emptyTitle = 'Ready to Learn',
+  emptyDescription,
+}: ChatInterfaceProps) {
   const {
     currentConversation,
     messages,
@@ -26,6 +42,8 @@ export default function ChatInterface() {
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // SSE line buffer to handle partial lines across TCP chunks
+  const sseBufferRef = useRef('');
 
   // Auto-scroll to bottom with RAF for better performance
   useEffect(() => {
@@ -44,19 +62,27 @@ export default function ChatInterface() {
     const messageContent = input.trim();
     setInput('');
     setError(null);
+    sseBufferRef.current = '';
 
     try {
       setIsSendingMessage(true);
       setIsStreaming(true);
 
+      // Read user's AI preferences from localStorage
+      const aiProvider = localStorage.getItem('ai-settings-provider') || 'cerebras';
+      const aiModel = localStorage.getItem('ai-settings-model') || 'llama-3.3-70b';
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-ai-provider': aiProvider,
+          'x-ai-model': aiModel,
         },
         body: JSON.stringify({
           conversationId: currentConversation.id,
           message: messageContent,
+          useRag,
         }),
       });
 
@@ -74,56 +100,63 @@ export default function ChatInterface() {
 
       setIsSendingMessage(false);
 
-      // Async streaming processing
+      // Async streaming processing with proper SSE buffering
       while (true) {
         const { done, value } = await reader.read();
         
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+        // Append decoded text to buffer and process complete lines
+        sseBufferRef.current += decoder.decode(value, { stream: true });
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
+        // SSE events are delimited by \n\n — split on double-newline
+        const parts = sseBufferRef.current.split('\n\n');
+        // Last part may be incomplete — keep it in the buffer
+        sseBufferRef.current = parts.pop() || '';
 
-              // Handle user message from server
-              if (data.type === 'userMessage' && data.message) {
-                addMessage(data.message);
-                continue;
-              }
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith('data: ')) continue;
 
-              if (data.error) {
-                setError(data.error);
-                setIsStreaming(false);
-                clearStreamingMessage();
-                break;
-              }
+          try {
+            const data = JSON.parse(line.slice(6));
 
-              if (data.content) {
-                appendToStreamingMessage(data.content);
-              }
+            // Handle user message from server
+            if (data.type === 'userMessage' && data.message) {
+              addMessage(data.message);
+              continue;
+            }
 
-              if (data.done) {
-                // Finalize the message - fetch from API to get proper user data
-                if (data.messageId && currentConversation) {
-                  // Fetch the assistant message with proper user data
-                  const msgResponse = await fetch(`/api/messages/${data.messageId}`);
-                  if (msgResponse.ok) {
-                    const msgData = await msgResponse.json();
-                    if (msgData.message) {
-                      addMessage(msgData.message);
-                    }
+            if (data.error) {
+              setError(data.error);
+              setIsStreaming(false);
+              clearStreamingMessage();
+              break;
+            }
+
+            if (data.content) {
+              appendToStreamingMessage(data.content);
+            }
+
+            if (data.done) {
+              // Finalize the message — fetch full record then do ATOMIC state update
+              if (data.messageId && currentConversation) {
+                const msgResponse = await fetch(`/api/messages/${data.messageId}`);
+                if (msgResponse.ok) {
+                  const msgData = await msgResponse.json();
+                  if (msgData.message) {
+                    // ATOMIC: add message + clear streaming + set isStreaming=false in ONE render
+                    finalizeStreamingMessage(msgData.message);
+                    continue; // skip the manual cleanup below
                   }
                 }
-
-                setIsStreaming(false);
-                clearStreamingMessage();
               }
-            } catch (e) {
-              console.error('Error parsing chunk:', e);
+              // Fallback if fetch failed
+              setIsStreaming(false);
+              clearStreamingMessage();
             }
+          } catch (e) {
+            console.error('Error parsing SSE event:', e);
           }
         }
       }
@@ -134,7 +167,7 @@ export default function ChatInterface() {
       setIsStreaming(false);
       clearStreamingMessage();
     }
-  }, [currentConversation, input, isSendingMessage, isStreaming, addMessage, setIsSendingMessage, setIsStreaming, appendToStreamingMessage, clearStreamingMessage]);
+  }, [currentConversation, input, isSendingMessage, isStreaming, useRag, addMessage, setIsSendingMessage, setIsStreaming, appendToStreamingMessage, clearStreamingMessage, finalizeStreamingMessage]);
 
   if (!currentConversation) {
     return (
@@ -193,9 +226,9 @@ export default function ChatInterface() {
                   <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/5 animate-breathe">
                     <Sparkles className="h-8 w-8 text-primary/50" />
                   </div>
-                  <h3 className="mb-2 font-outfit text-base font-bold text-foreground">Ready to Learn</h3>
+                  <h3 className="mb-2 font-outfit text-base font-bold text-foreground">{emptyTitle}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Ask me anything about {currentConversation.subject.name}. I&apos;m here to help you understand and master the material.
+                    {emptyDescription || `Ask me anything about ${currentConversation.subject.name}. I'm here to help you understand and master the material.`}
                   </p>
                 </div>
               </div>
@@ -283,7 +316,7 @@ export default function ChatInterface() {
                   handleSubmit(e);
                 }
               }}
-              placeholder="Ask Prime PenTrix anything..."
+              placeholder={placeholder}
               disabled={isSendingMessage || isStreaming}
               className="flex-1 bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed resize-none custom-scrollbar"
               rows={1}

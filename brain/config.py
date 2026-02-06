@@ -1,52 +1,51 @@
 """
-Configuration for S2-Sentinel Brain API
+Prime PenTrix - Brain API Configuration
+Lightweight RAG: BM25 + OpenAI API Embeddings
 """
 
 import os
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
-    """Application settings"""
-    
-    # App config
+    """Application settings for the lightweight Brain API."""
+
+    # ── App ─────────────────────────────────────────────────
     app_name: str = "Prime PenTrix Brain API"
     version: str = "3.0.0"
     debug: bool = True
-    
-    # Database
-    database_url: str = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/prime_pentrix")
-    
-    # AI Models
-    cerebras_api_key: str = os.getenv("CEREBRAS_API_KEY", "")
-    cerebras_model: str = "llama-3.3-70b"
-    
-    gemini_api_key: str = os.getenv("GOOGLE_GEMINI_API_KEY", "")
-    gemini_model: str = "gemini-1.5-flash"
-    
+
+    # ── Database (PostgreSQL + pgvector) ────────────────────
+    database_url: str = os.getenv(
+        "DATABASE_URL",
+        "postgresql://postgres:password@localhost:5432/prime_pentrix",
+    )
+
+    # ── OpenAI API (for embeddings only) ────────────────────
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
-    
-    # Embedding model (sentence-transformers)
-    embedding_model: str = "all-MiniLM-L6-v2"
-    embedding_dim: int = 384
-    
-    # RAG config
-    chunk_size: int = 500
-    chunk_overlap: int = 50
-    max_context_chunks: int = 5
-    top_k: int = 20
-    min_similarity: float = 0.5
-    
-    # Vector DB (pgvector)
-    use_pgvector: bool = True
-    
-    # ChromaDB (alternative)
-    chroma_persist_dir: str = "./data/chromadb"
-    
-    # CORS
-    cors_origins: list = ["http://localhost:3000", "http://localhost:3001"]
-    
+    openai_embedding_model: str = "text-embedding-3-small"
+    openai_embedding_dim: int = 1536
+    openai_base_url: str = "https://api.openai.com/v1"
+
+    # ── RAG Config ──────────────────────────────────────────
+    chunk_size: int = 500          # Target characters per chunk
+    chunk_overlap: int = 50        # Overlap between chunks
+    max_context_chunks: int = 5    # Max chunks injected into prompt
+    top_k: int = 10                # Search results to consider
+    bm25_weight: float = 0.4      # BM25 weight in hybrid search
+    semantic_weight: float = 0.6   # Semantic weight in hybrid search
+    rrf_k: int = 60                # RRF constant
+
+    # ── CORS ────────────────────────────────────────────────
+    cors_origins: list = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+    ]
+
     class Config:
         env_file = ".env"
         case_sensitive = False
+
 
 settings = Settings()

@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-# S2-Sentinel Web - Dockerfile
+# Prime-Pentrix Web - Dockerfile
 # Next.js 15 frontend with multi-stage build
 # ═══════════════════════════════════════════════════════════════
 

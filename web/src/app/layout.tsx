@@ -50,14 +50,34 @@ export default function RootLayout({
   return (
     <ClerkProvider
       appearance={{
+        layout: {
+          socialButtonsPlacement: 'bottom',
+          socialButtonsVariant: 'iconButton',
+        },
         variables: {
-          colorPrimary: '#34d399', // Emerald accent
-          colorBackground: '#0f172a', // Dark background
+          colorPrimary: '#10b981',
+          colorBackground: '#1e293b',
+          colorText: '#f1f5f9',
+          colorTextOnPrimaryBackground: '#ffffff',
+          colorTextSecondary: '#94a3b8',
+          colorInputBackground: '#334155',
+          colorInputText: '#f1f5f9',
+          colorShimmer: '#475569',
+          colorNeutral: '#cbd5e1',
+          colorDanger: '#ef4444',
+          colorSuccess: '#10b981',
+          colorWarning: '#f59e0b',
+          borderRadius: '0.5rem',
+          fontFamily: 'var(--font-inter)',
         },
       }}
+      signInUrl="/sign-in"
+      signUpUrl="/sign-up"
+      afterSignInUrl="/dashboard"
+      afterSignUpUrl="/dashboard"
     >
       <html lang="en" suppressHydrationWarning>
-        <body className={`${inter.variable} ${outfit.variable} font-sans antialiased`}>
+        <body className={`${inter.variable} ${outfit.variable} font-sans antialiased min-h-screen`}>
           <ThemeProvider>
             <ReactQueryProvider>
               {children}

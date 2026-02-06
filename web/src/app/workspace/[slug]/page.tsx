@@ -6,6 +6,7 @@ import { Subject } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ThemeSwitcher } from '@/components/theme-switcher';
+import { AISettingsModal } from '@/components/ai-settings-modal';
 import { UserButton } from '@clerk/nextjs';
 import {
   ArrowLeft,
@@ -19,8 +20,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import ConversationSidebar from '@/components/chat/ConversationSidebar';
 import ChatInterface from '@/components/chat/ChatInterface';
-import DocumentUpload from '@/components/documents/DocumentUpload';
-import DocumentList from '@/components/documents/DocumentList';
+import DocumentsTab from '@/components/documents/DocumentsTab';
 import { useChatStore } from '@/store/chatStore';
 import { useChatActions } from '@/hooks/useChatActions';
 import { useEffect } from 'react';
@@ -157,6 +157,7 @@ export default function WorkspacePage() {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
+            <AISettingsModal />
             <ThemeSwitcher />
             <div className="h-6 w-px bg-border/30" />
             <UserButton
@@ -179,7 +180,7 @@ export default function WorkspacePage() {
             <TabsList className="h-11 w-full justify-start gap-1 bg-transparent">
               {[
                 { value: 'chat', icon: MessageSquare, label: 'Chat' },
-                { value: 'docs', icon: FileText, label: 'Documents' },
+                { value: 'docs', icon: FileText, label: 'Documents & RAG' },
                 { value: 'tools', icon: Wrench, label: 'Tools' },
                 { value: 'quiz', icon: Brain, label: 'Quiz' },
               ].map((tab) => (
@@ -203,37 +204,15 @@ export default function WorkspacePage() {
                 <div className="w-72 flex-shrink-0 border-r border-border/20 glass-subtle">
                   <ConversationSidebar subjectId={subject.id} />
                 </div>
-                {/* Chat Area */}
+                {/* Pure AI Chat — no RAG, no document search */}
                 <div className="flex-1">
-                  <ChatInterface />
+                  <ChatInterface useRag={false} />
                 </div>
               </div>
             </TabsContent>
 
             <TabsContent value="docs" className="m-0 h-full">
-              <div className="flex h-full flex-col overflow-hidden">
-                {/* Documents Header */}
-                <div className="flex-shrink-0 p-4 pb-3 border-b border-border/10">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="font-outfit text-base font-bold text-foreground flex items-center gap-2">
-                        Documents
-                        <span className="text-[10px] font-medium text-primary/60 bg-primary/8 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
-                          RAG
-                        </span>
-                      </h3>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Upload study materials for AI-powered retrieval
-                      </p>
-                    </div>
-                  </div>
-                  <DocumentUpload subjectId={subject.id} />
-                </div>
-                {/* Documents List */}
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                  <DocumentList subjectId={subject.id} />
-                </div>
-              </div>
+              <DocumentsTab subjectId={subject.id} />
             </TabsContent>
 
             <TabsContent value="tools" className="m-0 h-full">

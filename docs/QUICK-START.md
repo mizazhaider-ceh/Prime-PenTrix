@@ -16,12 +16,19 @@ This guide gets you up and running in 5 minutes.
 
 ### 1. Start PostgreSQL
 
+**Using Docker Compose:**
 ```bash
-cd prime-pentrix/infrastructure
+cd sentinel-v3/infrastructure
 docker-compose up -d postgres
 ```
 
-✅ PostgreSQL is now running at `localhost:5432`
+**Or Windows PowerShell (Full Stack):**
+```powershell
+cd sentinel-v3
+.\docker-start.ps1
+```
+
+✅ PostgreSQL is now running at `localhost:5432` (Database: `primepentrix_v3`)
 
 ### 2. Setup Frontend
 
@@ -35,7 +42,7 @@ npm install
 Edit `web/.env.local` with your database URL:
 
 ```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/prime_pentrix?schema=public"
+DATABASE_URL="postgresql://postgres:password@localhost:5432/primepentrix_v3?schema=public"
 ```
 
 ### 4. Initialize Database
@@ -75,9 +82,26 @@ npm run dev
 
 ## 🐳 Docker Full Stack (Alternative)
 
+### Option A: Windows PowerShell Scripts
+
+```powershell
+cd sentinel-v3
+
+# Start all services (builds images + starts containers)
+.\docker-start.ps1
+
+# Stop all services
+.\docker-stop.ps1
+
+# Restart services (no rebuild)
+.\docker-restart.ps1
+```
+
+### Option B: Manual Docker Compose
+
 ### 1. Configure Environment
 
-Add your Clerk keys to `infrastructure/.env`:
+Add your Clerk keys to `infrastructure/docker.env`:
 
 ```env
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
@@ -87,19 +111,18 @@ CLERK_SECRET_KEY=sk_test_...
 ### 2. Build & Start
 
 ```bash
-cd prime-pentrix/infrastructure
-docker-compose up --build
+cd sentinel-v3/infrastructure
+docker-compose up --build -d
 ```
 
 ### 3. Initialize Database
 
-In a new terminal:
-
 ```bash
-cd ../web
-npm run db:generate
-npm run db:push
-npm run db:seed
+# Initialize Prisma schema
+docker exec -it primepentrix-web npx prisma db push
+
+# Seed with 8 subjects
+docker exec -it primepentrix-web npx prisma db seed
 ```
 
 🚀 Open http://localhost:3000
@@ -114,7 +137,7 @@ npm run db:seed
 
 **Solution:** Make sure `.env.local` exists in `web/` directory and contains:
 ```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/prime_pentrix?schema=public"
+DATABASE_URL="postgresql://postgres:password@localhost:5432/primepentrix_v3?schema=public"
 ```
 
 ### "Module not found: @prisma/client"

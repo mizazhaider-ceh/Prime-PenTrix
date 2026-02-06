@@ -1,6 +1,7 @@
 import { AIProvider, AIMessage, AIStreamChunk, AIProviderError } from './provider';
 import { CerebrasProvider } from './cerebras';
 import { GeminiProvider } from './gemini';
+import { OpenAIProvider } from './openai';
 
 export interface AIManagerConfig {
   cerebras?: {
@@ -11,7 +12,11 @@ export interface AIManagerConfig {
     apiKey: string;
     model: string;
   };
-  preferredProvider?: 'cerebras' | 'gemini';
+  openai?: {
+    apiKey: string;
+    model: string;
+  };
+  preferredProvider?: 'cerebras' | 'gemini' | 'openai';
   temperature?: number;
   maxTokens?: number;
   topP?: number;
@@ -51,6 +56,22 @@ export class AIManager {
       
       if (config.preferredProvider === 'gemini' || !this.preferredProvider) {
         this.preferredProvider = geminiProvider;
+      }
+    }
+
+    // Initialize OpenAI if configured
+    if (config.openai?.apiKey && config.openai?.model) {
+      const openaiProvider = new OpenAIProvider({
+        apiKey: config.openai.apiKey,
+        model: config.openai.model,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        topP: config.topP,
+      });
+      this.providers.push(openaiProvider);
+      
+      if (config.preferredProvider === 'openai' || !this.preferredProvider) {
+        this.preferredProvider = openaiProvider;
       }
     }
 

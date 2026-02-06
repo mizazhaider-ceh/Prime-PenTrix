@@ -1,8 +1,8 @@
-# S2-Sentinel Copilot V3 - Quick Start Script (Windows PowerShell)
+# Prime-Pentrix V3 - Quick Start Script (Windows PowerShell)
 
 Write-Host @"
 ╔══════════════════════════════════════════════════════════════════╗
-║         S2-SENTINEL COPILOT V3 - QUICK START SETUP               ║
+║           PRIME-PENTRIX V3 - QUICK START SETUP                   ║
 ║                  Howest University Belgium                       ║
 ╚══════════════════════════════════════════════════════════════════╝
 "@ -ForegroundColor Cyan
@@ -17,7 +17,7 @@ try {
     Write-Host "✅ Node.js: $nodeVersion" -ForegroundColor Green
     Write-Host "✅ npm: $npmVersion" -ForegroundColor Green
 } catch {
-    Write-Host "❌ Node.js not found. Please install Node.js 22+ first." -ForegroundColor Red
+    Write-Host "[X] Node.js not found. Please install Node.js 22+ first." -ForegroundColor Red
     exit 1
 }
 
@@ -26,7 +26,7 @@ Write-Host "`n📦 Installing frontend dependencies..." -ForegroundColor Yellow
 Set-Location web
 npm install
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Failed to install dependencies" -ForegroundColor Red
+    Write-Host "[X] Failed to install dependencies" -ForegroundColor Red
     exit 1
 }
 Write-Host "✅ Frontend dependencies installed" -ForegroundColor Green
@@ -73,7 +73,7 @@ Write-Host @"
 
    💾 Option B: Local PostgreSQL
       - Install PostgreSQL 16 + pgvector extension
-      - Create database: sentinel_v3
+      - Create database: primepentrix_v3
       - Update DATABASE_URL in .env.local
 
 3. Initialize Database:

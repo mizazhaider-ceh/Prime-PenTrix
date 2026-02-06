@@ -1,13 +1,13 @@
 @echo off
 setlocal EnableDelayedExpansion
-title Sentinel V3 - Server Manager
+title Prime-Pentrix V3 - Server Manager
 color 0A
 
 :MENU
 cls
 echo.
 echo ========================================
-echo   SENTINEL V3 - SERVER MANAGER
+echo   PRIME-PENTRIX V3 - SERVER MANAGER
 echo ========================================
 echo.
 echo [1] Start Server

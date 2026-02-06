@@ -11,6 +11,7 @@ const chatRequestSchema = z.object({
   conversationId: z.string().uuid(),
   message: z.string().min(1),
   contextDocuments: z.array(z.string()).optional(),
+  useRag: z.boolean().optional().default(false), // Only true for "Chat with Documents"
 });
 
 export async function POST(req: NextRequest) {
@@ -25,6 +26,10 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const validatedData = chatRequestSchema.parse(body);
+
+    // Read user's AI preferences from request (or use defaults)
+    const userPreferredProvider = req.headers.get('x-ai-provider') as 'cerebras' | 'gemini' | 'openai' | null;
+    const userPreferredModel = req.headers.get('x-ai-model');
 
     // Fetch conversation with subject and messages
     const conversation = await prisma.conversation.findFirst({
@@ -67,12 +72,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // ── RAG: Fetch relevant document context ─────────────────
+    // ── RAG: Fetch relevant document context (ONLY if useRag=true) ──
     let ragContextDocs: string[] = validatedData.contextDocuments || [];
     let ragChunkIds: string[] = [];
 
-    // Auto-fetch RAG context if no explicit context provided
-    if (ragContextDocs.length === 0) {
+    // Only search documents when explicitly in "Chat with Documents" mode
+    if (validatedData.useRag && ragContextDocs.length === 0) {
       try {
         const ragResponse = await fetch(`${BRAIN_API_URL}/query`, {
           method: 'POST',
@@ -113,21 +118,29 @@ export async function POST(req: NextRequest) {
       validatedData.message
     );
 
-    // Initialize AI manager
+    // Initialize AI manager with user preferences
+    const preferredProvider = userPreferredProvider || (process.env.PREFERRED_AI_PROVIDER as 'cerebras' | 'gemini' | 'openai') || 'cerebras';
+    
     const aiManager = new AIManager({
       cerebras: process.env.CEREBRAS_API_KEY
         ? {
             apiKey: process.env.CEREBRAS_API_KEY,
-            model: process.env.CEREBRAS_MODEL || 'llama3.1-8b',
+            model: (preferredProvider === 'cerebras' && userPreferredModel) ? userPreferredModel : (process.env.CEREBRAS_MODEL || 'llama3.1-8b'),
           }
         : undefined,
       gemini: process.env.GOOGLE_GEMINI_API_KEY
         ? {
             apiKey: process.env.GOOGLE_GEMINI_API_KEY,
-            model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+            model: (preferredProvider === 'gemini' && userPreferredModel) ? userPreferredModel : (process.env.GEMINI_MODEL || 'gemini-1.5-flash'),
           }
         : undefined,
-      preferredProvider: (process.env.PREFERRED_AI_PROVIDER as 'cerebras' | 'gemini') || 'cerebras',
+      openai: process.env.OPENAI_CHAT_API_KEY
+        ? {
+            apiKey: process.env.OPENAI_CHAT_API_KEY,
+            model: (preferredProvider === 'openai' && userPreferredModel) ? userPreferredModel : (process.env.OPENAI_CHAT_MODEL || 'gpt-4o'),
+          }
+        : undefined,
+      preferredProvider,
       temperature: 0.7,
       maxTokens: 2048,
     });

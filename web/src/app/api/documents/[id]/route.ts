@@ -277,7 +277,29 @@ export async function DELETE(
       }
     }
 
-    // Delete from database (cascade deletes chunks)
+    // Delete embeddings/chunks from Brain API (BM25 index + vector cleanup)
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+      const response = await fetch(`${backendUrl}/documents/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.warn('Brain API delete warning:', await response.text());
+        // Continue with DB deletion even if Brain API fails
+      } else {
+        const result = await response.json();
+        console.log(`✅ Brain API: Deleted ${result.deleted_chunks} chunks for document ${id}`);
+      }
+    } catch (error) {
+      console.error('Error calling Brain API delete:', error);
+      // Continue with DB deletion even if Brain API is down
+    }
+
+    // Delete from database (cascade deletes chunks automatically)
     await prisma.document.delete({
       where: { id },
     });

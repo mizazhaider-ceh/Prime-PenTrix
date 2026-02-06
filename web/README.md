@@ -132,7 +132,7 @@ See the main project [README](../README.md) for contribution guidelines.
 
 ## 📄 License
 
-Copyright © 2026 Sentinel V3. All rights reserved.
+Copyright © 2026 Prime-Pentrix V3. All rights reserved.
 
 ## Deploy on Vercel
 

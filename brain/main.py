@@ -1,11 +1,13 @@
 """
 Prime PenTrix - FastAPI Backend (Brain)
-Where Penetration Testing Meets Intelligence
-Python backend for AI/RAG operations
+========================================
+Lightweight RAG backend: BM25 + OpenAI API embeddings.
+NO sentence-transformers, NO torch, NO local models.
+
+Where Penetration Testing Meets Intelligence.
 """
 
 import asyncio
-import json
 import logging
 from typing import List, Optional
 from contextlib import asynccontextmanager
@@ -24,8 +26,7 @@ from rag.database import (
     close_db,
     update_document_status,
     store_chunks,
-    semantic_search,
-    get_all_chunks_for_subject,
+    delete_chunks_for_document,
 )
 
 # ═══════════════════════════════════════════════════════════════
@@ -48,16 +49,17 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events."""
     # Startup
     logger.info("🚀 Starting Prime PenTrix Brain API...")
-    await init_db()
-    # Pre-load RAG engine (downloads models on first run)
-    get_rag_engine()
-    logger.info("✅ Brain API ready")
-    
+    init_db()  # sync (psycopg2)
+    engine = get_rag_engine()  # No model download, instant
+    logger.info(f"✅ Brain API ready — {engine}")
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down Brain API...")
-    await close_db()
+    engine = get_rag_engine()
+    await engine.close()
+    close_db()
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -66,7 +68,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Prime PenTrix Brain API",
-    description="Where Penetration Testing Meets Intelligence - AI/RAG Backend",
+    description="Lightweight RAG: BM25 + OpenAI Embeddings — Where Penetration Testing Meets Intelligence",
     version="3.0.0",
     lifespan=lifespan,
 )
@@ -119,16 +121,15 @@ class SearchRequest(BaseModel):
     user_id: str
     top_k: int = Field(default=5, ge=1, le=20)
     search_type: str = Field(default="hybrid")  # semantic, bm25, hybrid
-    min_similarity: float = Field(default=0.5, ge=0.0, le=1.0)
 
 class SearchResult(BaseModel):
     id: str
     content: str
-    chunk_index: int
+    chunk_index: int = 0
     page_number: Optional[int] = None
-    document_id: str
-    filename: str
-    original_name: str
+    document_id: str = ""
+    filename: str = ""
+    original_name: str = ""
     score: float
     search_type: str
 
@@ -145,6 +146,7 @@ class QueryRequest(BaseModel):
     conversation_id: Optional[str] = None
     mode: str = "chat"
     top_k: int = 5
+    search_type: str = "hybrid"
 
 class QueryResponse(BaseModel):
     context_chunks: List[str]
@@ -162,18 +164,21 @@ async def root():
         "service": "Prime PenTrix Brain API",
         "version": "3.0.0",
         "status": "healthy",
+        "architecture": "BM25 + OpenAI Embeddings (Lightweight)",
     }
 
 @app.get("/health")
 async def health_check():
-    rag = get_rag_engine()
+    engine = get_rag_engine()
     return {
         "status": "healthy",
         "services": {
             "fastapi": "running",
-            "rag_engine": "ready" if rag else "not initialized",
-            "embedding_model": settings.embedding_model,
-            "embedding_dim": settings.embedding_dim,
+            "rag_engine": repr(engine),
+            "openai_configured": engine.embedding_client.is_configured,
+            "embedding_model": settings.openai_embedding_model,
+            "embedding_dim": settings.openai_embedding_dim,
+            "bm25_index_size": engine.bm25_index.size,
         },
     }
 
@@ -184,24 +189,36 @@ async def health_check():
 
 @app.post("/embeddings", response_model=EmbeddingResponse)
 async def generate_embeddings(request: EmbeddingRequest):
-    """Generate embeddings for a list of texts."""
+    """Generate embeddings for a list of texts via OpenAI API."""
     try:
         if not request.texts:
             raise HTTPException(status_code=400, detail="No texts provided")
-
         if len(request.texts) > 100:
             raise HTTPException(
                 status_code=400,
                 detail="Maximum 100 texts per request",
             )
 
-        rag = get_rag_engine()
-        embeddings = rag.generate_embeddings(request.texts)
+        engine = get_rag_engine()
+        if not engine.embedding_client.is_configured:
+            raise HTTPException(
+                status_code=503,
+                detail="OpenAI API key not configured — cannot generate embeddings",
+            )
+
+        embeddings = await engine.generate_embeddings(request.texts)
+        # Filter out None results
+        valid = [e for e in embeddings if e is not None]
+        if not valid:
+            raise HTTPException(
+                status_code=500,
+                detail="Embedding generation returned no results",
+            )
 
         return EmbeddingResponse(
-            embeddings=embeddings,
-            model=settings.embedding_model,
-            dimensions=settings.embedding_dim,
+            embeddings=valid,
+            model=settings.openai_embedding_model,
+            dimensions=settings.openai_embedding_dim,
         )
     except HTTPException:
         raise
@@ -263,20 +280,20 @@ async def _process_document_pipeline(
 ) -> None:
     """
     Full document processing pipeline (runs in background).
-    
+
     Pipeline:
     1. Extract text from document
-    2. Chunk text with sentence-aware splitting
-    3. Generate embeddings for each chunk
-    4. Compute term frequencies for BM25
-    5. Store chunks + embeddings in pgvector
+    2. Chunk text with paragraph-aware splitting
+    3. Generate embeddings via OpenAI API
+    4. Store chunks + embeddings in pgvector
+    5. Index chunks in BM25 index
     6. Update document status
     """
     try:
         logger.info(f"📄 Processing document: {filename} ({document_id})")
 
         # Update status to processing
-        await update_document_status(document_id, "processing")
+        update_document_status(document_id, "processing")
 
         # ── Step 1: Extract text ──────────────────────────────
         logger.info(f"  Step 1: Extracting text from {mime_type}...")
@@ -293,14 +310,12 @@ async def _process_document_pipeline(
         if not text.strip():
             raise Exception("No text could be extracted from document")
 
-        logger.info(
-            f"  Extracted {len(text)} chars, {page_count} pages"
-        )
+        logger.info(f"  Extracted {len(text)} chars, {page_count} pages")
 
         # ── Step 2: Chunk text ────────────────────────────────
         logger.info("  Step 2: Chunking text...")
         chunks: List[Chunk] = chunking_engine.chunk_text(
-            text, page_count=page_count, strategy="sentence"
+            text, page_count=page_count
         )
 
         if not chunks:
@@ -308,30 +323,22 @@ async def _process_document_pipeline(
 
         logger.info(f"  Created {len(chunks)} chunks")
 
-        # ── Step 3: Generate embeddings ───────────────────────
-        logger.info("  Step 3: Generating embeddings...")
-        rag = get_rag_engine()
-        chunk_texts = [chunk.content for chunk in chunks]
+        # ── Step 3: Generate embeddings (OpenAI API) ──────────
+        engine = get_rag_engine()
+        all_embeddings: List[Optional[List[float]]] = []
 
-        # Batch embeddings (process in batches of 32)
-        all_embeddings = []
-        batch_size = 32
-        for i in range(0, len(chunk_texts), batch_size):
-            batch = chunk_texts[i : i + batch_size]
-            batch_embeddings = rag.generate_embeddings(batch)
-            all_embeddings.extend(batch_embeddings)
+        if engine.embedding_client.is_configured:
+            logger.info("  Step 3: Generating embeddings via OpenAI API...")
+            chunk_texts = [chunk.content for chunk in chunks]
+            all_embeddings = await engine.generate_embeddings(chunk_texts)
+            valid_count = sum(1 for e in all_embeddings if e is not None)
+            logger.info(f"  Generated {valid_count}/{len(chunks)} embeddings")
+        else:
+            logger.warning("  Step 3: SKIPPED (OpenAI API not configured)")
+            all_embeddings = [None] * len(chunks)
 
-        logger.info(f"  Generated {len(all_embeddings)} embeddings")
-
-        # ── Step 4: Compute term frequencies ──────────────────
-        logger.info("  Step 4: Computing term frequencies for BM25...")
-        term_frequencies = [
-            chunking_engine.compute_term_frequencies(chunk.content)
-            for chunk in chunks
-        ]
-
-        # ── Step 5: Store in database ─────────────────────────
-        logger.info("  Step 5: Storing chunks in pgvector...")
+        # ── Step 4: Store in database ─────────────────────────
+        logger.info("  Step 4: Storing chunks in pgvector...")
         chunk_data = []
         for i, chunk in enumerate(chunks):
             chunk_data.append({
@@ -341,27 +348,41 @@ async def _process_document_pipeline(
                 "page_number": chunk.page_number,
                 "start_char": chunk.start_char,
                 "end_char": chunk.end_char,
-                "term_frequency": term_frequencies[i] if i < len(term_frequencies) else None,
             })
 
-        stored_count = await store_chunks(document_id, chunk_data)
+        stored_count = store_chunks(document_id, chunk_data)
+
+        # ── Step 5: Index in BM25 ────────────────────────────
+        logger.info("  Step 5: Indexing in BM25...")
+        bm25_chunks = [
+            {
+                "id": f"{document_id}_{i}",
+                "content": chunk.content,
+                "chunk_index": chunk.chunk_index,
+                "page_number": chunk.page_number,
+                "document_id": document_id,
+                "filename": filename,
+                "original_name": filename,
+            }
+            for i, chunk in enumerate(chunks)
+        ]
+        engine.index_chunks(bm25_chunks)
 
         # ── Step 6: Update status ─────────────────────────────
-        await update_document_status(
+        update_document_status(
             document_id, "completed", processed_at="now"
         )
 
         logger.info(
-            f"✅ Document processed: {filename} - "
-            f"{stored_count} chunks stored"
+            f"✅ Document processed: {filename} — "
+            f"{stored_count} chunks stored, BM25 indexed"
         )
 
     except Exception as e:
         logger.error(f"❌ Processing failed for {document_id}: {e}")
-        await update_document_status(
+        update_document_status(
             document_id, "failed", error_message=str(e)
         )
-
 
 # ═══════════════════════════════════════════════════════════════
 # SEARCH ENDPOINT
@@ -370,183 +391,43 @@ async def _process_document_pipeline(
 @app.post("/search", response_model=SearchResponse)
 async def search_documents(request: SearchRequest):
     """
-    Search documents using hybrid search:
-    semantic (pgvector) + BM25 + cross-encoder reranking.
+    Search documents using BM25, semantic, or hybrid search.
+    Hybrid = BM25 + OpenAI embeddings combined via RRF.
     """
     try:
-        rag = get_rag_engine()
+        engine = get_rag_engine()
         results = []
 
-        if request.search_type in ("semantic", "hybrid"):
-            # ── Semantic Search ───────────────────────────────
-            query_embedding = rag.generate_embedding(request.query)
-
-            semantic_results = await semantic_search(
-                query_embedding=query_embedding,
-                subject_id=request.subject_id,
-                user_id=request.user_id,
-                top_k=request.top_k * 4,  # Get more for reranking
-                min_similarity=request.min_similarity,
+        if request.search_type == "bm25":
+            raw = engine.bm25_search(
+                request.query, request.subject_id,
+                request.user_id, top_k=request.top_k,
+            )
+        elif request.search_type == "semantic":
+            raw = await engine.semantic_search_api(
+                request.query, request.subject_id,
+                request.user_id, top_k=request.top_k,
+            )
+        else:  # hybrid (default)
+            raw = await engine.hybrid_search(
+                request.query, request.subject_id,
+                request.user_id, top_k=request.top_k,
             )
 
-            if request.search_type == "semantic":
-                # Pure semantic search - just rerank and return
-                if semantic_results:
-                    docs = [r["content"] for r in semantic_results]
-                    reranked = rag.rerank(
-                        request.query, docs, top_k=request.top_k
-                    )
-                    for ranked in reranked:
-                        orig = semantic_results[ranked["index"]]
-                        results.append(
-                            SearchResult(
-                                id=orig["id"],
-                                content=orig["content"],
-                                chunk_index=orig["chunk_index"],
-                                page_number=orig.get("page_number"),
-                                document_id=orig["document_id"],
-                                filename=orig["filename"],
-                                original_name=orig["original_name"],
-                                score=ranked["score"],
-                                search_type="semantic",
-                            )
-                        )
-            else:
-                # Hybrid search: combine semantic + BM25
-                # ── BM25 Search ───────────────────────────────
-                all_chunks = await get_all_chunks_for_subject(
-                    request.subject_id, request.user_id
+        for r in raw:
+            results.append(
+                SearchResult(
+                    id=r.get("id", ""),
+                    content=r.get("content", ""),
+                    chunk_index=r.get("chunk_index", 0),
+                    page_number=r.get("page_number"),
+                    document_id=r.get("document_id", ""),
+                    filename=r.get("filename", ""),
+                    original_name=r.get("original_name", ""),
+                    score=r.get("score", 0.0),
+                    search_type=r.get("search_type", request.search_type),
                 )
-
-                if all_chunks:
-                    chunk_contents = [c["content"] for c in all_chunks]
-                    bm25_indices = rag.bm25_search(
-                        request.query,
-                        chunk_contents,
-                        top_k=request.top_k * 4,
-                    )
-
-                    # Build semantic ranking (by index in semantic_results)
-                    semantic_ranking = list(range(len(semantic_results)))
-
-                    # Map BM25 results to global indices
-                    # We need to find which semantic results correspond
-                    semantic_ids = {r["id"]: i for i, r in enumerate(semantic_results)}
-                    bm25_ranking = []
-                    bm25_id_map = {}
-                    for bm25_idx in bm25_indices:
-                        if bm25_idx < len(all_chunks):
-                            chunk_id = all_chunks[bm25_idx]["id"]
-                            bm25_id_map[len(bm25_ranking)] = all_chunks[bm25_idx]
-                            bm25_ranking.append(len(bm25_ranking))
-
-                    # ── RRF Fusion ────────────────────────────
-                    # Combine rankings using Reciprocal Rank Fusion
-                    all_candidates = {}
-
-                    # Add semantic results
-                    for rank, sem_result in enumerate(semantic_results):
-                        doc_id = sem_result["id"]
-                        rrf_score = 1.0 / (60 + rank + 1)
-                        all_candidates[doc_id] = {
-                            **sem_result,
-                            "rrf_score": rrf_score,
-                        }
-
-                    # Add BM25 results
-                    for rank, bm25_idx in enumerate(bm25_indices):
-                        if bm25_idx < len(all_chunks):
-                            chunk = all_chunks[bm25_idx]
-                            doc_id = chunk["id"]
-                            rrf_score = 1.0 / (60 + rank + 1)
-                            if doc_id in all_candidates:
-                                all_candidates[doc_id]["rrf_score"] += rrf_score
-                            else:
-                                all_candidates[doc_id] = {
-                                    **chunk,
-                                    "rrf_score": rrf_score,
-                                    "similarity": 0.0,
-                                }
-
-                    # Sort by RRF score
-                    sorted_candidates = sorted(
-                        all_candidates.values(),
-                        key=lambda x: x["rrf_score"],
-                        reverse=True,
-                    )
-
-                    # ── Cross-Encoder Reranking ───────────────
-                    top_candidates = sorted_candidates[: request.top_k * 2]
-                    if top_candidates:
-                        candidate_texts = [c["content"] for c in top_candidates]
-                        reranked = rag.rerank(
-                            request.query,
-                            candidate_texts,
-                            top_k=request.top_k,
-                        )
-
-                        for ranked in reranked:
-                            orig = top_candidates[ranked["index"]]
-                            results.append(
-                                SearchResult(
-                                    id=orig["id"],
-                                    content=orig["content"],
-                                    chunk_index=orig.get("chunk_index", 0),
-                                    page_number=orig.get("page_number"),
-                                    document_id=orig.get("document_id", ""),
-                                    filename=orig.get("filename", ""),
-                                    original_name=orig.get("original_name", ""),
-                                    score=ranked["score"],
-                                    search_type="hybrid",
-                                )
-                            )
-                else:
-                    # No BM25 data, fall back to semantic only
-                    for sem_result in semantic_results[: request.top_k]:
-                        results.append(
-                            SearchResult(
-                                id=sem_result["id"],
-                                content=sem_result["content"],
-                                chunk_index=sem_result["chunk_index"],
-                                page_number=sem_result.get("page_number"),
-                                document_id=sem_result["document_id"],
-                                filename=sem_result["filename"],
-                                original_name=sem_result["original_name"],
-                                score=sem_result["similarity"],
-                                search_type="semantic",
-                            )
-                        )
-
-        elif request.search_type == "bm25":
-            # ── Pure BM25 Search ──────────────────────────────
-            all_chunks = await get_all_chunks_for_subject(
-                request.subject_id, request.user_id
             )
-
-            if all_chunks:
-                chunk_contents = [c["content"] for c in all_chunks]
-                bm25_indices = rag.bm25_search(
-                    request.query,
-                    chunk_contents,
-                    top_k=request.top_k,
-                )
-
-                for i, idx in enumerate(bm25_indices):
-                    if idx < len(all_chunks):
-                        chunk = all_chunks[idx]
-                        results.append(
-                            SearchResult(
-                                id=chunk["id"],
-                                content=chunk["content"],
-                                chunk_index=chunk.get("chunk_index", 0),
-                                page_number=None,
-                                document_id=chunk.get("document_id", ""),
-                                filename=chunk.get("filename", ""),
-                                original_name=chunk.get("original_name", ""),
-                                score=1.0 / (i + 1),  # Reciprocal rank as score
-                                search_type="bm25",
-                            )
-                        )
 
         return SearchResponse(
             results=results,
@@ -571,57 +452,51 @@ async def process_query(request: QueryRequest):
     Returns relevant document chunks to inject into the AI prompt.
     """
     try:
-        rag = get_rag_engine()
-
-        # Generate query embedding
-        query_embedding = rag.generate_embedding(request.query)
-
-        # Semantic search
-        semantic_results = await semantic_search(
-            query_embedding=query_embedding,
+        engine = get_rag_engine()
+        context_chunks, chunk_ids = await engine.get_context_for_query(
+            query=request.query,
             subject_id=request.subject_id,
             user_id=request.user_id,
-            top_k=request.top_k * 3,
-            min_similarity=0.4,  # Lower threshold for context
+            top_k=request.top_k,
+            search_type=request.search_type,
         )
-
-        if not semantic_results:
-            return QueryResponse(
-                context_chunks=[],
-                chunk_ids=[],
-                model=settings.embedding_model,
-            )
-
-        # Rerank with cross-encoder
-        docs = [r["content"] for r in semantic_results]
-        reranked = rag.rerank(request.query, docs, top_k=request.top_k)
-
-        context_chunks = []
-        chunk_ids = []
-        for ranked in reranked:
-            if ranked["score"] > 0:  # Only include positive relevance
-                orig = semantic_results[ranked["index"]]
-                # Format context with source attribution
-                source = orig.get("original_name", orig.get("filename", "unknown"))
-                page = orig.get("page_number")
-                attribution = f"[Source: {source}"
-                if page:
-                    attribution += f", Page {page}"
-                attribution += "]"
-                
-                context_chunks.append(
-                    f"{orig['content']}\n{attribution}"
-                )
-                chunk_ids.append(orig["id"])
 
         return QueryResponse(
             context_chunks=context_chunks,
             chunk_ids=chunk_ids,
-            model=settings.embedding_model,
+            model=settings.openai_embedding_model,
         )
 
     except Exception as e:
         logger.error(f"Query error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════════════
+# DOCUMENT DELETE (cleanup BM25 index + DB)
+# ═══════════════════════════════════════════════════════════════
+
+@app.delete("/documents/{document_id}")
+async def delete_document_chunks(document_id: str):
+    """Delete all chunks for a document from DB and BM25 index."""
+    try:
+        # Delete from database and get chunk IDs
+        deleted_count, chunk_ids = delete_chunks_for_document(document_id)
+        
+        # Remove from BM25 index to prevent deleted docs from appearing in search
+        engine = get_rag_engine()
+        if chunk_ids:
+            engine.remove_document_from_index(chunk_ids)
+            logger.info(f"Removed {len(chunk_ids)} chunks from BM25 index for document {document_id}")
+        
+        return {
+            "document_id": document_id,
+            "deleted_chunks": deleted_count,
+            "removed_from_index": len(chunk_ids),
+            "message": f"Deleted {deleted_count} chunks and removed from search index",
+        }
+    except Exception as e:
+        logger.error(f"Delete error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

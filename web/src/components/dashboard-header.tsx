@@ -2,6 +2,7 @@
 
 import { UserButton } from '@clerk/nextjs';
 import { ThemeSwitcher } from './theme-switcher';
+import { AISettingsModal } from './ai-settings-modal';
 import { Sparkles, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 
@@ -39,6 +40,7 @@ export function DashboardHeader() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
+          <AISettingsModal />
           <ThemeSwitcher />
           <div className="h-6 w-px bg-border/50" />
           <UserButton

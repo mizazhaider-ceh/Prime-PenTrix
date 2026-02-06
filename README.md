@@ -80,30 +80,63 @@ sentinel-v3/
 1. **Clone the repository**
    ```bash
    git clone https://github.com/yourusername/prime-pentrix.git
-   cd prime-pentrix
+   cd sentinel-v3
    ```
 
 2. **Set up environment variables**
    ```bash
    # Copy env templates
    cp web/.env.example web/.env.local
-   cp brain/.env.example brain/.env
+   cp infrastructure/docker.env infrastructure/docker.env
    
    # Add your Clerk keys in web/.env.local
-   # Add AI API keys in brain/.env
+   # Add AI API keys in infrastructure/docker.env
    ```
 
-3. **Start all services with Docker Compose**
+3. **Start all services with Docker**
+   
+   **Windows (PowerShell):**
+   ```powershell
+   .\docker-start.ps1
+   ```
+   
+   **Linux/Mac:**
    ```bash
    cd infrastructure
-   docker-compose up --build
+   docker-compose up --build -d
    ```
 
-4. **Access the application**
+4. **Initialize Database** (First time only)
+   ```bash
+   docker exec -it primepentrix-web npx prisma db push
+   docker exec -it primepentrix-web npx prisma db seed
+   ```
+
+5. **Access the application**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8000
    - API Docs: http://localhost:8000/docs
    - Database: localhost:5432
+
+### Docker Management Scripts (Windows)
+
+```powershell
+# Start all services (builds + starts)
+.\docker-start.ps1
+
+# Stop all services
+.\docker-stop.ps1
+
+# Restart services (without rebuild)
+.\docker-restart.ps1
+
+# View logs
+cd infrastructure
+docker-compose logs -f
+
+# Check status
+docker-compose ps
+```
 
 ### Option 2: Local Development Setup
 
@@ -113,7 +146,8 @@ sentinel-v3/
 # Install PostgreSQL 16
 # Install pgvector extension
 psql -U postgres
-CREATE DATABASE prime_pentrix;
+CREATE DATABASE primepentrix_v3;
+\c primepentrix_v3
 CREATE EXTENSION vector;
 ```
 
@@ -179,7 +213,7 @@ Backend API will be available at: http://localhost:8000
 
 ```env
 # Database
-DATABASE_URL="postgresql://postgres:password@localhost:5432/prime_pentrix"
+DATABASE_URL="postgresql://postgres:password@localhost:5432/primepentrix_v3?schema=public"
 
 # Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
@@ -197,7 +231,7 @@ NEXT_PUBLIC_BACKEND_URL="http://localhost:8000"
 #### Backend (`brain/.env`)
 
 ```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/prime_pentrix"
+DATABASE_URL="postgresql://postgres:password@localhost:5432/primepentrix_v3"
 CEREBRAS_API_KEY="your_key"
 GOOGLE_GEMINI_API_KEY="your_key"
 OPENAI_API_KEY="your_key"
@@ -215,6 +249,14 @@ OPENAI_API_KEY="your_key"
 ## 📚 Database Schema
 
 The application uses **Prisma ORM v7.3.0** with PostgreSQL + pgvector. Prisma 7 uses a JavaScript-based engine with the `@prisma/adapter-pg` driver adapter for PostgreSQL connections.
+
+**Database Name:** `primepentrix_v3`
+
+**Docker Containers:**
+- `primepentrix-postgres` - PostgreSQL 16 with pgvector
+- `primepentrix-brain` - FastAPI Backend
+- `primepentrix-web` - Next.js Frontend
+- `primepentrix-network` - Bridge network
 
 ### Database Models (12 total)
 

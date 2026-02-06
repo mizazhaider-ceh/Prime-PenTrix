@@ -73,8 +73,8 @@ export const API_ROUTES = {
 
 export const STORAGE_KEYS = {
   theme: 'prime-pentrix-theme',
-  activeSubject: 'sentinel-active-subject',
-  conversationHistory: 'sentinel-conversation-history',
+  activeSubject: 'primepentrix-active-subject',
+  conversationHistory: 'primepentrix-conversation-history',
 } as const;
 
 export const RAG_CONFIG = {
