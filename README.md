@@ -1,8 +1,8 @@
-# 🛡️ S2-Sentinel Copilot V3
+# ⚡ Prime PenTrix
 
-> Hyper-Intelligent AI Study Platform for CS Engineering Semester 2 @ Howest University Belgium
+> Where Penetration Testing Meets Intelligence - AI-Powered Learning Platform for CS Engineering @ Howest University Belgium
 
-[![Version](https://img.shields.io/badge/version-3.0.0-emerald.svg)](https://github.com/yourusername/sentinel-v3)
+[![Version](https://img.shields.io/badge/version-3.0.0-emerald.svg)](https://github.com/yourusername/prime-pentrix)
 [![Next.js](https://img.shields.io/badge/Next.js-16.1.6-black.svg)](https://nextjs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-teal.svg)](https://fastapi.tiangolo.com/)
 [![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://python.org/)
@@ -10,7 +10,7 @@
 
 ## 📌 Overview
 
-S2-Sentinel Copilot V3 is a modern, full-stack AI-powered study platform designed specifically for Computer Science Engineering students. It combines context-aware AI assistance, RAG (Retrieval-Augmented Generation) technology, and specialized security toolkits to provide personalized learning experiences across 8 core subjects.
+Prime PenTrix is a modern, full-stack AI-powered study platform designed specifically for Computer Science Engineering students. It combines context-aware AI assistance, RAG (Retrieval-Augmented Generation) technology, and specialized security toolkits to provide personalized learning experiences across 8 core subjects.
 
 ### ⭐ Key Features
 
@@ -79,8 +79,8 @@ sentinel-v3/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/sentinel-v3.git
-   cd sentinel-v3
+   git clone https://github.com/yourusername/prime-pentrix.git
+   cd prime-pentrix
    ```
 
 2. **Set up environment variables**
@@ -113,7 +113,7 @@ sentinel-v3/
 # Install PostgreSQL 16
 # Install pgvector extension
 psql -U postgres
-CREATE DATABASE sentinel_v3;
+CREATE DATABASE prime_pentrix;
 CREATE EXTENSION vector;
 ```
 
@@ -179,7 +179,7 @@ Backend API will be available at: http://localhost:8000
 
 ```env
 # Database
-DATABASE_URL="postgresql://postgres:password@localhost:5432/sentinel_v3"
+DATABASE_URL="postgresql://postgres:password@localhost:5432/prime_pentrix"
 
 # Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
@@ -197,7 +197,7 @@ NEXT_PUBLIC_BACKEND_URL="http://localhost:8000"
 #### Backend (`brain/.env`)
 
 ```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/sentinel_v3"
+DATABASE_URL="postgresql://postgres:password@localhost:5432/prime_pentrix"
 CEREBRAS_API_KEY="your_key"
 GOOGLE_GEMINI_API_KEY="your_key"
 OPENAI_API_KEY="your_key"
@@ -263,7 +263,7 @@ npm run db:studio
 12 beautiful themes included:
 
 - 💎 **Glass** (Default) - Deep emerald gradient
-- 🛡️ **Sentinel Dark** - Tactical command center
+- ⚡ **Prime Dark** - Tactical command center
 - 💻 **Hacker** - Matrix green terminal
 - 🌙 **Midnight** - Ultra dark indigo
 - ⚡ **Cyber** - High contrast yellow/black
