@@ -1,0 +1,85 @@
+# ═══════════════════════════════════════════════════════════════
+# S2-SENTINEL COPILOT V3 - DOCKER COMPOSE
+# Complete infrastructure orchestration
+# ═══════════════════════════════════════════════════════════════
+
+services:
+  # PostgreSQL 16 with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: sentinel-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: sentinel_v3
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - sentinel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Python FastAPI Backend (Brain)
+  brain:
+    build:
+      context: ../brain
+      dockerfile: Dockerfile
+    container_name: sentinel-brain
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/sentinel_v3
+      CEREBRAS_API_KEY: ${CEREBRAS_API_KEY}
+      GOOGLE_GEMINI_API_KEY: ${GOOGLE_GEMINI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../brain:/app
+      - brain_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+  # Next.js Frontend (Web)
+  web:
+    build:
+      context: ../web
+      dockerfile: Dockerfile
+      target: development
+    container_name: sentinel-web
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/sentinel_v3
+      NEXT_PUBLIC_BACKEND_URL: http://brain:8000
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../web:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - postgres
+      - brain
+    networks:
+      - sentinel-network
+    restart: unless-stopped
+
+networks:
+  sentinel-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  brain_data:
