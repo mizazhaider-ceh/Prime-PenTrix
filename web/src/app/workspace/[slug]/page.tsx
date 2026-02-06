@@ -19,6 +19,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import ConversationSidebar from '@/components/chat/ConversationSidebar';
 import ChatInterface from '@/components/chat/ChatInterface';
+import DocumentUpload from '@/components/documents/DocumentUpload';
+import DocumentList from '@/components/documents/DocumentList';
 import { useChatStore } from '@/store/chatStore';
 import { useChatActions } from '@/hooks/useChatActions';
 import { useEffect } from 'react';
@@ -209,18 +211,27 @@ export default function WorkspacePage() {
             </TabsContent>
 
             <TabsContent value="docs" className="m-0 h-full">
-              <div className="flex h-full items-center justify-center">
-                <div className="animate-fade-in-scale text-center">
-                  <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/5">
-                    <FileText className="h-10 w-10 text-muted-foreground/50" />
+              <div className="flex h-full flex-col overflow-hidden">
+                {/* Documents Header */}
+                <div className="flex-shrink-0 p-4 pb-3 border-b border-border/10">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <h3 className="font-outfit text-base font-bold text-foreground flex items-center gap-2">
+                        Documents
+                        <span className="text-[10px] font-medium text-primary/60 bg-primary/8 px-1.5 py-0.5 rounded-md uppercase tracking-wider">
+                          RAG
+                        </span>
+                      </h3>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Upload study materials for AI-powered retrieval
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="mb-2 font-outfit text-xl font-bold">Document Management</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Upload & manage study documents
-                  </p>
-                  <span className="mt-3 inline-block rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    Coming in Phase 3
-                  </span>
+                  <DocumentUpload subjectId={subject.id} />
+                </div>
+                {/* Documents List */}
+                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                  <DocumentList subjectId={subject.id} />
                 </div>
               </div>
             </TabsContent>
