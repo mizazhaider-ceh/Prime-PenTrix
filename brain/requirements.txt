@@ -1,0 +1,53 @@
+# ═══════════════════════════════════════════════════════════════
+# S2-Sentinel Brain API - Python Dependencies
+# ═══════════════════════════════════════════════════════════════
+
+# FastAPI & Web Framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.12
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# Database
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.35
+asyncpg==0.29.0
+
+# Vector Database
+pgvector==0.3.6
+chromadb==0.5.15
+
+# AI & ML
+sentence-transformers==3.2.1
+transformers==4.46.0
+torch==2.5.0
+numpy==1.26.4
+
+# Document Processing
+pypdf==4.3.1
+python-docx==1.1.2
+python-magic==0.4.27
+unstructured==0.16.5
+
+# Text Processing
+rank-bm25==0.2.2
+nltk==3.9.1
+spacy==3.8.2
+
+# API Clients
+openai==1.54.0
+google-generativeai==0.8.1
+anthropic==0.39.0
+
+# Utilities
+python-dotenv==1.0.1
+python-jose[cryptography]==3.3.0
+aiofiles==24.1.0
+pydantic-ai==0.0.16
+
+# Development
+pytest==8.3.3
+pytest-asyncio==0.24.0
+black==24.10.0
+ruff==0.7.4
