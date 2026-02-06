@@ -18,10 +18,12 @@ Prime PenTrix is a modern, full-stack AI-powered study platform designed specifi
 - 📚 **8 Core Subjects** - Networks, Pentesting, Backend, Linux, CTF, Scripting, Privacy Law, AI Security
 - 🎨 **12 Stunning Themes** - Glass, Hacker, Cyber, Midnight, Ocean, Aurora, and more
 - 🔐 **Clerk Authentication** - Secure OAuth-based authentication with user sync
-- 🧠 **Hybrid RAG Engine** - Semantic search + BM25 + Cross-encoder reranking (pgvector)
+- 🧠 **Hybrid RAG Engine** - BM25 keyword search + OpenAI embeddings (fast, accurate, cost-effective)
 - 🛠️ **24+ Tools** - Subject-specific toolkits for hands-on learning
 - 📊 **Smart Analytics** - Track progress, streaks, quiz performance with spaced repetition
 - 🐳 **Docker-Ready** - Complete infrastructure orchestration with Docker Compose
+
+> **Why Hybrid RAG?** We chose OpenAI embeddings over fully local models (Sentence Transformers) for better quality, faster Docker builds (450MB vs 3.5GB), and minimal cost (~$0.20/student/month). See [RAG Architecture Decision](./docs/RAG-ARCHITECTURE.md) for detailed reasoning.
 
 ## 🏗️ Architecture
 
@@ -53,12 +55,12 @@ sentinel-v3/
 - **Framework**: FastAPI 0.115.0 (async/await)
 - **Language**: Python 3.11
 - **AI Models**: Cerebras (Llama 3.3-70B), Google Gemini 1.5 Flash
-- **Embeddings**: Sentence Transformers (all-MiniLM-L6-v2, 384 dims)
-- **Reranking**: Cross-Encoder (ms-marco-MiniLM-L-6-v2)
-- **Keyword Search**: BM25 (rank-bm25)
-- **Vector DB**: pgvector (PostgreSQL extension)
-- **Document Processing**: PyPDF, python-docx, unstructured
-- **NLP**: NLTK, spaCy
+- **RAG Architecture**: Hybrid Search (BM25 + OpenAI Embeddings)
+  - **Embeddings**: OpenAI text-embedding-3-small (1536 dims, $0.02/1M tokens)
+  - **Keyword Search**: BM25 (rank-bm25) - Fast, zero-dependency
+  - **Why not local?** See [RAG Architecture Decision](./docs/RAG-ARCHITECTURE.md)
+- **Document Processing**: PyPDF, python-docx, NLTK
+- **Database**: psycopg2 (PostgreSQL driver)
 
 #### Infrastructure
 - **Database**: PostgreSQL 16 with pgvector extension
@@ -410,10 +412,12 @@ pytest
 ### 🔜 Phase 3: RAG Engine
 - [ ] Document upload & processing
 - [ ] Text chunking & embedding generation
-- [ ] pgvector semantic search
-- [ ] BM25 keyword search
-- [ ] Hybrid search with RRF
-- [ ] Cross-encoder reranking
+- [ ] OpenAI embeddings via API (text-embedding-3-small)
+- [ ] BM25 keyword search (rank-bm25)
+- [ ] Hybrid search fusion (BM25 + semantic)
+- [ ] Simple reranking algorithm
+
+> **Architecture Decision:** Using OpenAI embeddings instead of local Sentence Transformers for better quality, faster builds, and minimal cost. Full reasoning: [RAG Architecture Decision](./docs/RAG-ARCHITECTURE.md)
 
 ### 🔜 Phase 4: Quiz System
 - [ ] Quiz generation with AI
@@ -433,6 +437,16 @@ pytest
 - [ ] Performance optimization
 - [ ] Security audit
 - [ ] Documentation complete
+
+## 📖 Documentation
+
+Comprehensive guides and technical documentation:
+
+- **[Quick Start Guide](./docs/QUICK-START.md)** - Get running in 5 minutes
+- **[Docker Setup Guide](./docs/DOCKER-SETUP.md)** - Complete Docker orchestration guide
+- **[RAG Architecture Decision](./docs/RAG-ARCHITECTURE.md)** - Why hybrid RAG with OpenAI embeddings
+- **[Phase 1 Complete](./docs/PHASE-1-COMPLETE.md)** - Infrastructure implementation details
+- **[Phase 2 Complete](./docs/PHASE-2-COMPLETE.md)** - AI Chat implementation details
 
 ## 🤝 Contributing
 
