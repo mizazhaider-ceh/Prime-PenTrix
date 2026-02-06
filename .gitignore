@@ -1,0 +1,156 @@
+# ═══════════════════════════════════════════════════════════════
+# PRIME PENTRIX - MONOREPO GITIGNORE
+# Where Penetration Testing Meets Intelligence
+# ═══════════════════════════════════════════════════════════════
+
+# ──────────────────────────────────────────────────────────────
+# ENVIRONMENT & SECRETS
+# ──────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+*.env
+.envrc
+*.pem
+*.key
+*.crt
+
+# ──────────────────────────────────────────────────────────────
+# NEXT.JS / WEB FRONTEND
+# ──────────────────────────────────────────────────────────────
+web/.next/
+web/out/
+web/build/
+web/dist/
+web/node_modules/
+web/.pnp
+web/.pnp.js
+web/.yarn/install-state.gz
+
+# ──────────────────────────────────────────────────────────────
+# PYTHON / BRAIN BACKEND
+# ──────────────────────────────────────────────────────────────
+brain/__pycache__/
+brain/*.py[cod]
+brain/*$py.class
+brain/*.so
+brain/.Python
+brain/env/
+brain/venv/
+brain/ENV/
+brain/env.bak/
+brain/venv.bak/
+brain/.venv/
+brain/pip-log.txt
+brain/pip-delete-this-directory.txt
+brain/.pytest_cache/
+brain/.coverage
+brain/htmlcov/
+brain/*.egg-info/
+brain/dist/
+brain/build/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ──────────────────────────────────────────────────────────────
+# VECTOR DB & RAG
+# ──────────────────────────────────────────────────────────────
+brain/data/chromadb/
+brain/data/embeddings/
+brain/data/documents/
+server/data/chromadb/
+*.faiss
+*.index
+
+# ──────────────────────────────────────────────────────────────
+# DATABASES
+# ──────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+prisma/migrations/dev.db
+prisma/*.db
+
+# ──────────────────────────────────────────────────────────────
+# LOGS
+# ──────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+brain/logs/
+server/logs/
+
+# ──────────────────────────────────────────────────────────────
+# DOCKER
+# ──────────────────────────────────────────────────────────────
+docker-compose.override.yml
+.dockerignore
+
+# ──────────────────────────────────────────────────────────────
+# OS FILES
+# ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+._*
+
+# ──────────────────────────────────────────────────────────────
+# IDE / EDITORS
+# ──────────────────────────────────────────────────────────────
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.code-workspace
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.tmproj
+
+# ──────────────────────────────────────────────────────────────
+# TESTING
+# ──────────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+tests/__pycache__/
+.pytest_cache/
+
+# ──────────────────────────────────────────────────────────────
+# BUILD ARTIFACTS
+# ──────────────────────────────────────────────────────────────
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# ──────────────────────────────────────────────────────────────
+# UPLOADS & USER DATA (LOCAL)
+# ──────────────────────────────────────────────────────────────
+uploads/
+user-uploads/
+temp/
+tmp/
+
+# ──────────────────────────────────────────────────────────────
+# MISC
+# ──────────────────────────────────────────────────────────────
+.turbo
+.vercel
+.cache
+*.bak
+*.backup
+node_modules/
