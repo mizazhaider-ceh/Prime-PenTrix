@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { AIManager } from '@/lib/ai/manager';
 import { PromptBuilder } from '@/lib/prompts/builder';
 
+const BRAIN_API_URL = process.env.BRAIN_API_URL || 'http://localhost:8000';
+
 const chatRequestSchema = z.object({
   conversationId: z.string().uuid(),
   message: z.string().min(1),
@@ -65,7 +67,37 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Build prompt context
+    // ── RAG: Fetch relevant document context ─────────────────
+    let ragContextDocs: string[] = validatedData.contextDocuments || [];
+    let ragChunkIds: string[] = [];
+
+    // Auto-fetch RAG context if no explicit context provided
+    if (ragContextDocs.length === 0) {
+      try {
+        const ragResponse = await fetch(`${BRAIN_API_URL}/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: validatedData.message,
+            subject_id: conversation.subjectId,
+            user_id: user.id,
+            top_k: 5,
+          }),
+          signal: AbortSignal.timeout(10000), // 10s timeout
+        });
+
+        if (ragResponse.ok) {
+          const ragData = await ragResponse.json();
+          ragContextDocs = ragData.context_chunks || [];
+          ragChunkIds = ragData.chunk_ids || [];
+        }
+      } catch (ragError) {
+        // RAG is optional - continue without context on failure
+        console.warn('RAG context retrieval failed (non-blocking):', ragError);
+      }
+    }
+
+    // Build prompt context with RAG documents
     const promptContext = {
       subject: conversation.subject,
       mode: conversation.mode,
@@ -73,7 +105,7 @@ export async function POST(req: NextRequest) {
         role: m.role,
         content: m.content,
       })),
-      contextDocuments: validatedData.contextDocuments,
+      contextDocuments: ragContextDocs,
     };
 
     const messages = PromptBuilder.buildConversation(
@@ -132,7 +164,7 @@ export async function POST(req: NextRequest) {
               provider = (chunk as any).provider || 'unknown';
               model = (chunk as any).model || 'unknown';
               
-              // Save assistant message
+              // Save assistant message with RAG citation tracking
               const assistantMessage = await prisma.message.create({
                 data: {
                   role: 'assistant',
@@ -141,6 +173,7 @@ export async function POST(req: NextRequest) {
                   userId: user.id,
                   model: model,
                   tokenCount: fullResponse.split(/\s+/).length, // Rough estimate
+                  contextUsed: ragChunkIds, // Track which document chunks were used
                 },
               });
 
