@@ -1,0 +1,387 @@
+// This is your Prisma schema file
+// For more info: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  extensions = [pgvector(map: "vector", schema: "public")]
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// USER MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════
+
+model User {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clerkId       String   @unique // Clerk user ID for sync
+  email         String   @unique
+  name          String?
+  avatarUrl     String?
+  
+  // User preferences
+  theme         String   @default("glass")
+  settings      Json     @default("{}")
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastActiveAt  DateTime @default(now())
+  
+  // Relations
+  conversations Conversation[]
+  messages      Message[]
+  documents     Document[]
+  analytics     Analytics[]
+  studySessions StudySession[]
+  quizScores    QuizScore[]
+  quizReviews   QuizReview[]
+  toolHistory   ToolHistory[]
+  globalStats   GlobalStats?
+  
+  @@index([clerkId])
+  @@index([email])
+  @@map("users")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SUBJECT & LEARNING CONTENT
+// ═══════════════════════════════════════════════════════════════════
+
+model Subject {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code          String   @unique // e.g., "CS-NET-S2"
+  slug          String   @unique // e.g., "networks"
+  name          String
+  credits       Int
+  
+  // Visual styling
+  color         String
+  gradient      String
+  icon          String
+  
+  // Metadata
+  teachers      String[] // Array of teacher names
+  topics        String[] // Array of topic strings
+  pedagogy      String   // Teaching style: "packet-first", "attack-chain", etc.
+  toolkit       String[] // Array of tool IDs
+  promptStyle   String   @db.Text
+  examType      String
+  description   String   @db.Text
+  
+  // Timestamps
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  conversations Conversation[]
+  documents     Document[]
+  analytics     Analytics[]
+  studySessions StudySession[]
+  quizScores    QuizScore[]
+  quizReviews   QuizReview[]
+  toolHistory   ToolHistory[]
+  
+  @@index([slug])
+  @@index([code])
+  @@map("subjects")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CHAT & CONVERSATIONS
+// ═══════════════════════════════════════════════════════════════════
+
+model Conversation {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String
+  mode        String   @default("chat") // chat, questions, explain, summarize, quiz
+  
+  // Foreign keys
+  userId      String   @db.Uuid
+  subjectId   String   @db.Uuid
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  
+  @@index([userId])
+  @@index([subjectId])
+  @@index([createdAt])
+  @@map("conversations")
+}
+
+model Message {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role            String   // user, assistant, system
+  content         String   @db.Text
+  
+  // Optional metadata
+  tokenCount      Int?
+  model           String?
+  contextUsed     String[] // Array of document chunk IDs used
+  
+  // Foreign keys
+  conversationId  String   @db.Uuid
+  userId          String   @db.Uuid
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([conversationId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DOCUMENT STORAGE & RAG
+// ═══════════════════════════════════════════════════════════════════
+
+model Document {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int      // File size in bytes
+  fileUrl       String?  // URL if stored externally (S3/GCS)
+  
+  // Processing status
+  status        String   @default("pending") // pending, processing, completed, failed
+  errorMessage  String?  @db.Text
+  
+  // Foreign keys
+  userId        String   @db.Uuid
+  subjectId     String   @db.Uuid
+  
+  // Timestamps
+  uploadedAt    DateTime @default(now())
+  processedAt   DateTime?
+  
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject       Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  chunks        DocumentChunk[]
+  
+  @@index([userId])
+  @@index([subjectId])
+  @@index([status])
+  @@index([uploadedAt])
+  @@map("documents")
+}
+
+model DocumentChunk {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  content           String   @db.Text
+  embedding         Unsupported("vector(384)")? // pgvector for semantic search
+  
+  // Chunk metadata
+  chunkIndex        Int
+  pageNumber        Int?
+  startChar         Int?
+  endChar           Int?
+  
+  // BM25 metadata (for hybrid search)
+  termFrequency     Json?    // TF scores for BM25
+  
+  // Foreign keys
+  documentId        String   @db.Uuid
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  
+  // Relations
+  document          Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  
+  @@index([documentId])
+  @@index([chunkIndex])
+  @@map("document_chunks")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ANALYTICS & TRACKING
+// ═══════════════════════════════════════════════════════════════════
+
+model Analytics {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventType     String   // page_view, chat_message, document_upload, tool_use, quiz_attempt
+  eventData     Json
+  
+  // Foreign keys
+  userId        String   @db.Uuid
+  subjectId     String?  @db.Uuid
+  
+  // Timestamps
+  timestamp     DateTime @default(now())
+  
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject       Subject? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([subjectId])
+  @@index([eventType])
+  @@index([timestamp])
+  @@map("analytics")
+}
+
+model StudySession {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  duration      Int      // Duration in seconds
+  messageCount  Int      @default(0)
+  mode          String   // chat, docs, tools, quiz
+  
+  // Foreign keys
+  userId        String   @db.Uuid
+  subjectId     String   @db.Uuid
+  
+  // Timestamps
+  startedAt     DateTime @default(now())
+  endedAt       DateTime?
+  
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject       Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([subjectId])
+  @@index([startedAt])
+  @@map("study_sessions")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// QUIZ & SPACED REPETITION
+// ═══════════════════════════════════════════════════════════════════
+
+model QuizScore {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  topic         String
+  difficulty    String   // easy, medium, hard
+  score         Float    // Percentage 0-100
+  questionsCount Int
+  correctCount  Int
+  timeSpent     Int      // Time in seconds
+  
+  // Foreign keys
+  userId        String   @db.Uuid
+  subjectId     String   @db.Uuid
+  
+  // Timestamps
+  completedAt   DateTime @default(now())
+  
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject       Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([subjectId])
+  @@index([topic])
+  @@index([completedAt])
+  @@map("quiz_scores")
+}
+
+model QuizReview {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  question          String   @db.Text
+  userAnswer        String   @db.Text
+  correctAnswer     String   @db.Text
+  isCorrect         Boolean
+  
+  // Spaced repetition metadata
+  reviewCount       Int      @default(0)
+  nextReviewAt      DateTime?
+  easeFactor        Float    @default(2.5)
+  interval          Int      @default(1) // Days until next review
+  
+  // Foreign keys
+  userId            String   @db.Uuid
+  subjectId         String   @db.Uuid
+  
+  // Timestamps
+  lastReviewedAt    DateTime @default(now())
+  createdAt         DateTime @default(now())
+  
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject           Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([subjectId])
+  @@index([nextReviewAt])
+  @@index([isCorrect])
+  @@map("quiz_reviews")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TOOLS & UTILITIES
+// ═══════════════════════════════════════════════════════════════════
+
+model ToolHistory {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  toolId        String   // subnet-calculator, jwt-decoder, etc.
+  toolCategory  String   // networks, ctf, backend, etc.
+  inputData     Json
+  outputData    Json
+  
+  // Foreign keys
+  userId        String   @db.Uuid
+  subjectId     String   @db.Uuid
+  
+  // Timestamps
+  usedAt        DateTime @default(now())
+  
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject       Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([subjectId])
+  @@index([toolId])
+  @@index([usedAt])
+  @@map("tool_history")
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// GLOBAL STATS
+// ═══════════════════════════════════════════════════════════════════
+
+model GlobalStats {
+  id                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String   @unique @db.Uuid
+  
+  // Overall statistics
+  totalStudyTime      Int      @default(0) // Total time in seconds
+  totalChats          Int      @default(0)
+  totalQuizzes        Int      @default(0)
+  totalDocuments      Int      @default(0)
+  totalToolUses       Int      @default(0)
+  
+  // Streak tracking
+  currentStreak       Int      @default(0)
+  longestStreak       Int      @default(0)
+  lastStudyDate       DateTime?
+  
+  // Achievements (stored as JSON for flexibility)
+  achievements        Json     @default("[]")
+  
+  // Timestamps
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  // Relations
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@map("global_stats")
+}
