@@ -1,5 +1,6 @@
 # ═══════════════════════════════════════════════════════════════
-# S2-Sentinel Brain API - Python Dependencies
+# Prime PenTrix Brain API - Python Dependencies
+# Where Penetration Testing Meets Intelligence
 # ═══════════════════════════════════════════════════════════════
 
 # FastAPI & Web Framework

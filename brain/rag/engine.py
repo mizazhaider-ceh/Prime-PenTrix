@@ -1,6 +1,7 @@
 """
-RAG Engine Module
+Prime PenTrix - RAG Engine Module
 Handles semantic search, BM25, reranking, and context building
+Where Penetration Testing Meets Intelligence
 """
 
 from typing import List, Dict, Any, Optional
@@ -11,7 +12,7 @@ import numpy as np
 class RAGEngine:
     """
     Hybrid RAG engine combining:
-    - Semantic search (pgvector)
+    - Semantic search (pgvector via database.py)
     - BM25 keyword search
     - Cross-encoder reranking
     - Reciprocal Rank Fusion (RRF)
@@ -23,7 +24,7 @@ class RAGEngine:
         rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
     ):
         """Initialize RAG engine with embedding and reranking models"""
-        print(f"🚀 Initializing RAG Engine...")
+        print(f"🚀 Initializing Prime PenTrix RAG Engine...")
         print(f"   Embedding Model: {embedding_model}")
         print(f"   Reranking Model: {rerank_model}")
         
@@ -51,17 +52,17 @@ class RAGEngine:
         top_k: int = 20,
     ) -> List[Dict[str, Any]]:
         """
-        Perform semantic search using pgvector
-        Phase 3 implementation
+        Perform semantic search using pgvector.
+        NOTE: Actual pgvector queries are in rag/database.py
+        This method is kept for standalone usage without the full DB setup.
         """
-        # TODO: Query PostgreSQL with pgvector extension
-        # SELECT id, content, embedding <-> $1 AS distance
-        # FROM document_chunks
-        # WHERE subject_id = $2
-        # ORDER BY distance
-        # LIMIT $3
-        
-        return []
+        from .database import semantic_search as db_semantic_search
+        return await db_semantic_search(
+            query_embedding=query_embedding,
+            subject_id=subject_id,
+            user_id="",  # Requires user_id in full implementation
+            top_k=top_k,
+        )
     
     def bm25_search(
         self,
@@ -145,30 +146,37 @@ class RAGEngine:
         top_k: int = 5,
     ) -> List[Dict[str, Any]]:
         """
-        Perform hybrid search combining semantic + BM25 + reranking
-        Phase 3 implementation
+        Perform hybrid search combining semantic + BM25 + reranking.
+        NOTE: Full hybrid search orchestration is in main.py /search endpoint.
+        This provides a simpler standalone interface.
         """
         # 1. Generate query embedding
         query_embedding = self.generate_embedding(query)
         
-        # 2. Semantic search (pgvector)
+        # 2. Semantic search via pgvector
         semantic_results = await self.semantic_search(
             query_embedding,
             subject_id,
-            top_k=20,
+            top_k=top_k * 4,
         )
         
-        # 3. BM25 search (if we have documents)
-        # TODO: Fetch documents from database
+        if not semantic_results:
+            return []
+
+        # 3. Rerank with cross-encoder
+        docs = [r["content"] for r in semantic_results]
+        reranked = self.rerank(query, docs, top_k=top_k)
         
-        # 4. RRF fusion
-        # TODO: Combine rankings
+        results = []
+        for ranked in reranked:
+            orig = semantic_results[ranked["index"]]
+            results.append({
+                **orig,
+                "score": ranked["score"],
+                "search_type": "hybrid",
+            })
         
-        # 5. Rerank top candidates
-        # TODO: Cross-encoder reranking
-        
-        # Placeholder return
-        return []
+        return results
 
 # Initialize global RAG engine instance
 rag_engine = None

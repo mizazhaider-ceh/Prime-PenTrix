@@ -9,12 +9,12 @@ class Settings(BaseSettings):
     """Application settings"""
     
     # App config
-    app_name: str = "S2-Sentinel Brain API"
+    app_name: str = "Prime PenTrix Brain API"
     version: str = "3.0.0"
     debug: bool = True
     
     # Database
-    database_url: str = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/sentinel_v3")
+    database_url: str = os.getenv("DATABASE_URL", "postgresql://postgres:password@localhost:5432/prime_pentrix")
     
     # AI Models
     cerebras_api_key: str = os.getenv("CEREBRAS_API_KEY", "")
