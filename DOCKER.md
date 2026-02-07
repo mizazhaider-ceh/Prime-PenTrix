@@ -1,229 +1,263 @@
-# 🐳 Docker Setup - Prime-Pentrix V3
+# Docker Setup — Prime PenTrix V3
 
-Run the entire Prime-Pentrix V3 stack (PostgreSQL + Brain API + Next.js Frontend) using Docker.
+Run the entire Prime PenTrix V3 stack with a single command: **PostgreSQL 16 + pgvector**, **FastAPI Brain API**, and **Next.js 16 Frontend**.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-### 1. **Prerequisites**
-- Docker Desktop installed and running
-- Git (to clone the repo)
+### Prerequisites
 
-### 2. **Start All Services**
+| Requirement | Version |
+|-------------|---------|
+| Docker Desktop | 4.x+ (running) |
+| Git | Any recent version |
+
+### 1. Configure Environment
+
+Copy the example env file and fill in your API keys:
+
+```powershell
+cp infrastructure/docker.env.example infrastructure/docker.env
+```
+
+Required keys in `docker.env`:
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk OAuth public key |
+| `CLERK_SECRET_KEY` | Clerk OAuth secret key |
+| `CEREBRAS_API_KEY` | Primary AI provider |
+| `GEMINI_API_KEY` | Fallback AI provider |
+| `OPENAI_API_KEY` | Optional — used for embeddings |
+
+### 2. Start All Services
+
 ```powershell
 .\docker-start.ps1
 ```
 
-This will:
-- Build Docker images for Brain API and Next.js Frontend
-- Start PostgreSQL 16 with pgvector extension
-- Start the Brain API (FastAPI) on port 8000
-- Start the Next.js Frontend on port 3000
+This builds and launches three containers:
+- **primepentrix-postgres** — PostgreSQL 16 with pgvector on port 5432
+- **primepentrix-brain** — FastAPI RAG engine on port 8000
+- **primepentrix-web** — Next.js 16 frontend on port 3000
 
-### 3. **Access the Application**
-- 🌐 **Frontend**: http://localhost:3000
-- 🧠 **Brain API**: http://localhost:8000
-- 📚 **API Docs**: http://localhost:8000/docs
-- 🗄️ **PostgreSQL**: localhost:5432
+### 3. Access the Application
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:3000 |
+| Brain API | http://localhost:8000 |
+| Brain API Docs | http://localhost:8000/docs |
+| PostgreSQL | `localhost:5432` (user: `postgres`, db: `primepentrix_v3`) |
 
 ---
 
-## 📋 Management Scripts
+## Management Scripts
 
 | Script | Purpose |
 |--------|---------|
-| `docker-start.ps1` | 🚀 Build and start all services |
-| `docker-restart.ps1` | ♻️ Restart all services (no rebuild) |
-| `docker-stop.ps1` | 🛑 Stop all services |
+| `docker-start.ps1` | Build and start all services |
+| `docker-restart.ps1` | Restart all services (no rebuild) |
+| `docker-stop.ps1` | Stop all services |
 
 ---
 
-## 🔧 Useful Commands
+## Useful Commands
 
-### View Live Logs
+### View Logs
+
 ```powershell
 cd infrastructure
-docker-compose logs -f
-```
 
-### View Logs for Specific Service
-```powershell
-docker-compose logs -f web      # Frontend logs
-docker-compose logs -f brain    # Brain API logs
-docker-compose logs -f postgres # Database logs
+# All services
+docker-compose logs -f
+
+# Single service
+docker-compose logs -f web       # Frontend
+docker-compose logs -f brain     # Brain API
+docker-compose logs -f postgres  # Database
 ```
 
 ### Restart a Single Service
+
 ```powershell
-docker-compose restart web      # Restart frontend only
-docker-compose restart brain    # Restart Brain API only
+cd infrastructure
+docker-compose restart web       # Restart frontend only
+docker-compose restart brain     # Restart Brain API only
 ```
 
 ### Rebuild After Code Changes
+
 ```powershell
+cd infrastructure
 docker-compose up -d --build web    # Rebuild frontend
 docker-compose up -d --build brain  # Rebuild Brain API
 ```
 
-### Execute Commands in Running Container
+### Execute Commands in Containers
+
 ```powershell
-# Run Prisma migrations in the web container
-docker exec -it sentinel-web npx prisma migrate dev
+# Run Prisma migrations
+docker exec -it primepentrix-web npx prisma migrate dev
 
 # Access PostgreSQL CLI
-docker exec -it sentinel-postgres psql -U postgres -d sentinel_v3
+docker exec -it primepentrix-postgres psql -U postgres -d primepentrix_v3
 
-# Check Brain API Python dependencies
-docker exec -it sentinel-brain pip list
+# Check Brain API dependencies
+docker exec -it primepentrix-brain pip list
 ```
 
 ### Clean Everything (Nuclear Option)
+
 ```powershell
 cd infrastructure
-docker-compose down -v  # Stop and remove all containers + volumes
+docker-compose down -v   # Stops containers, removes volumes — ALL DATA LOST
 ```
 
 ---
 
-## ⚙️ Configuration
-
-### Environment Variables
-Edit `infrastructure/docker.env` to configure:
-- Database connection string
-- Clerk authentication keys
-- AI API keys (Cerebras, Gemini, OpenAI)
-- Brain API URL
+## Configuration
 
 ### Ports
-Default ports (can be changed in `docker-compose.yml`):
-- **Frontend**: 3000
-- **Brain API**: 8000
-- **PostgreSQL**: 5432
 
----
+Defaults (editable in `infrastructure/docker-compose.yml`):
 
-## 🐛 Troubleshooting
-
-### Port Already in Use
-```powershell
-# Kill processes on specific ports
-netstat -ano | findstr ":3000"
-taskkill /PID <PID> /F
-```
-
-### Frontend Won't Start
-```powershell
-# Check logs
-docker-compose logs web
-
-# Rebuild with no cache
-docker-compose build --no-cache web
-docker-compose up -d web
-```
-
-### Database Connection Issues
-```powershell
-# Check if PostgreSQL is healthy
-docker-compose ps
-
-# Restart database
-docker-compose restart postgres
-
-# Check database logs
-docker-compose logs postgres
-```
-
-### "Module not found" Errors
-```powershell
-# Rebuild node_modules volume
-docker-compose down
-docker volume rm infrastructure_web_node_modules
-docker-compose up -d --build web
-```
-
----
-
-## 📦 What's Running?
-
-### Services
-1. **sentinel-postgres** - PostgreSQL 16 + pgvector
-2. **sentinel-brain** - FastAPI backend with RAG engine
-3. **sentinel-web** - Next.js 16 frontend
+| Service | Port |
+|---------|------|
+| Frontend (Next.js) | 3000 |
+| Brain API (FastAPI) | 8000 |
+| PostgreSQL | 5432 |
 
 ### Volumes (Persistent Data)
-- `postgres_data` - Database files
-- `brain_cache` - Python package cache
-- `web_node_modules` - Node.js dependencies
-- `web_next` - Next.js build cache
+
+| Volume | Purpose |
+|--------|---------|
+| `postgres_data` | Database files |
+| `brain_cache` | Python package cache |
+| `web_node_modules` | Node.js dependencies |
+| `web_next` | Next.js build cache |
 
 ### Network
-- `sentinel-network` - Bridge network connecting all services
+
+All three services communicate over a Docker bridge network called `primepentrix-network`.
 
 ---
 
-## 🔄 Development Workflow
+## Development Workflow
 
-### Hot Reload is Enabled
-Code changes in `web/` and `brain/` directories automatically trigger rebuilds inside containers.
+### Hot Reload
 
-### Making Database Changes
+Code changes in `web/` and `brain/` directories are volume-mounted, so hot reload works automatically inside the containers.
+
+### Database Migrations
+
 ```powershell
 # Create a new Prisma migration
-docker exec -it sentinel-web npx prisma migrate dev --name your_migration_name
+docker exec -it primepentrix-web npx prisma migrate dev --name your_migration_name
 
-# Push schema changes without creating migration
-docker exec -it sentinel-web npx prisma db push
+# Push schema changes without migration file
+docker exec -it primepentrix-web npx prisma db push
 
-# Reset database (destructive!)
-docker exec -it sentinel-web npx prisma migrate reset
+# Reset database (destructive)
+docker exec -it primepentrix-web npx prisma migrate reset
 ```
 
 ### Updating Dependencies
 
-**Frontend (Node.js)**:
-```powershell
-# Add a package
-docker exec -it sentinel-web npm install <package-name>
+**Frontend (Node.js):**
 
-# Rebuild to update volume
+```powershell
+docker exec -it primepentrix-web npm install <package-name>
 docker-compose up -d --build web
 ```
 
-**Backend (Python)**:
+**Backend (Python):**
+
 ```powershell
-# Add to brain/requirements.txt, then:
+# Edit brain/requirements.txt, then:
+cd infrastructure
 docker-compose up -d --build brain
 ```
 
 ---
 
-## 🆚 Docker vs Local Development
+## Docker vs Local Development
 
-| Aspect | Docker | Local (npm/python) |
-|--------|--------|--------------------|
-| **Setup Time** | Longer initial build | Faster start |
-| **Isolation** | ✅ Fully isolated | ⚠️ Uses system packages |
-| **Consistency** | ✅ Same on all machines | ⚠️ Can differ |
-| **Hot Reload** | ✅ Yes (via volumes) | ✅ Yes |
-| **Port Conflicts** | ✅ Rare | ⚠️ Common |
-| **Best For** | Production-like, sharing | Quick iterations |
+| Aspect | Docker | Local (`npm` / `python`) |
+|--------|--------|----|
+| Setup time | Longer initial build (~5-10 min) | Faster start |
+| Isolation | Fully isolated | Uses system packages |
+| Consistency | Identical on all machines | Can differ between environments |
+| Hot reload | Yes (via volume mounts) | Yes |
+| Port conflicts | Rare | Common |
+| Best for | Production-like testing, sharing | Quick iterations, debugging |
 
 ---
 
-## 📝 Notes
+## Troubleshooting
 
-- First build takes 5-10 minutes (downloads images, installs dependencies)
-- Subsequent starts are much faster (< 30 seconds)
+### Port Already in Use
+
+```powershell
+netstat -ano | findstr ":3000"
+taskkill /PID <PID> /F
+```
+
+### Frontend Won't Start
+
+```powershell
+docker-compose logs web
+docker-compose build --no-cache web
+docker-compose up -d web
+```
+
+### Database Connection Issues
+
+```powershell
+docker-compose ps                 # Check if postgres is healthy
+docker-compose restart postgres   # Restart database
+docker-compose logs postgres      # Check logs
+```
+
+### "Module not found" Errors
+
+```powershell
+cd infrastructure
+docker-compose down
+docker volume rm infrastructure_web_node_modules
+docker-compose up -d --build web
+```
+
+### First Build Timing
+
+- Initial build: **5-10 minutes** (downloads images, installs dependencies)
+- Subsequent starts: **< 30 seconds** (cached layers)
 - Volumes persist data between container restarts
-- Use `docker-compose down -v` only if you want to reset everything
 
 ---
 
-## 🛟 Need Help?
+## Architecture Overview
 
-Check the main [README.md](../README.md) for:
-- Project overview
-- Full architecture details
-- Non-Docker setup instructions
-- Phase-by-phase development roadmap
+```
+┌───────────────────────────────────────────────────────┐
+│                 Docker Compose                        │
+│                                                       │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────┐ │
+│  │  postgres    │  │   brain     │  │    web       │ │
+│  │  (pgvector)  │  │  (FastAPI)  │  │  (Next.js)  │ │
+│  │  :5432       │  │  :8000      │  │  :3000      │ │
+│  └──────┬───────┘  └──────┬──────┘  └──────┬──────┘ │
+│         │                 │                │         │
+│         └─────────────────┴────────────────┘         │
+│                primepentrix-network                   │
+└───────────────────────────────────────────────────────┘
+```
+
+---
+
+## See Also
+
+- [README.md](README.md) — Project overview and full documentation
+- [docs/QUICK-START.md](docs/QUICK-START.md) — Local development setup
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — System design deep-dive

@@ -1,206 +1,255 @@
-# 🚀 Quick Start Guide - Prime PenTrix
+# Quick Start Guide — Prime PenTrix
 
-This guide gets you up and running in 5 minutes.
-
----
-
-## ✅ Prerequisites
-
-- **Node.js 20+** ([Download](https://nodejs.org/))
-- **Docker Desktop** ([Download](https://www.docker.com/products/docker-desktop/))
-- **Git** ([Download](https://git-scm.com/downloads))
+> Get the platform running in under 5 minutes
 
 ---
 
-## 🏃 Quick Start (Local Dev)
+## Prerequisites
 
-### 1. Start PostgreSQL
-
-**Using Docker Compose:**
-```bash
-cd sentinel-v3/infrastructure
-docker-compose up -d postgres
-```
-
-**Or Windows PowerShell (Full Stack):**
-```powershell
-cd sentinel-v3
-.\docker-start.ps1
-```
-
-✅ PostgreSQL is now running at `localhost:5432` (Database: `primepentrix_v3`)
-
-### 2. Setup Frontend
-
-```bash
-cd ../web
-npm install
-```
-
-### 3. Configure Environment
-
-Edit `web/.env.local` with your database URL:
-
-```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/primepentrix_v3?schema=public"
-```
-
-### 4. Initialize Database
-
-```bash
-npm run db:generate  # Generate Prisma Client
-npm run db:push      # Create tables
-npm run db:seed      # Add 8 subjects
-```
-
-✅ Output should show:
-```
-✅ Created/Updated: Computer Networks (CS-NET-S2)
-✅ Created/Updated: Web Pentesting Fundamentals (CS-PENTEST-S2)
-... (6 more subjects)
-```
-
-### 5. Get Clerk Keys
-
-1. Go to [clerk.com](https://clerk.com) and sign up
-2. Create a new application
-3. Copy these keys to `web/.env.local`:
-   ```env
-   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-   CLERK_SECRET_KEY=sk_test_...
-   ```
-
-### 6. Start Dev Server
-
-```bash
-npm run dev
-```
-
-🚀 Open http://localhost:3000
+| Requirement | Minimum | Recommended |
+|------------|---------|-------------|
+| Node.js | 20+ | 22 LTS |
+| Python | 3.11+ | 3.12 |
+| PostgreSQL | 16 (with pgvector) | 16+ |
+| Docker | 24+ | Latest Desktop |
+| Git | 2.x | Latest |
+| Clerk account | — | [clerk.com](https://clerk.com) |
+| AI API key | 1 provider | Cerebras (fastest) |
 
 ---
 
-## 🐳 Docker Full Stack (Alternative)
+## Option 1: Docker (Recommended)
 
-### Option A: Windows PowerShell Scripts
+The fastest path — runs PostgreSQL, the Brain API, and the Web app in containers.
+
+### Step 1: Clone
 
 ```powershell
+git clone https://github.com/MIHx0/prime-pentrix.git
 cd sentinel-v3
-
-# Start all services (builds images + starts containers)
-.\docker-start.ps1
-
-# Stop all services
-.\docker-stop.ps1
-
-# Restart services (no rebuild)
-.\docker-restart.ps1
 ```
 
-### Option B: Manual Docker Compose
+### Step 2: Configure Environment
 
-### 1. Configure Environment
+```powershell
+# Copy the template
+cp web/.env.example web/.env.local
+```
 
-Add your Clerk keys to `infrastructure/docker.env`:
+Edit `web/.env.local` and fill in:
 
 ```env
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
+# Database (Docker will use this)
+DATABASE_URL="postgresql://postgres:password@primepentrix-postgres:5432/primepentrix_v3?schema=public"
+
+# Clerk Authentication (get from clerk.com dashboard)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
+CLERK_SECRET_KEY="sk_test_..."
+
+# AI Provider (at least one)
+CEREBRAS_API_KEY="csk-..."
 ```
 
-### 2. Build & Start
+### Step 3: Start
 
-```bash
-cd sentinel-v3/infrastructure
-docker-compose up --build -d
+```powershell
+# Windows PowerShell
+.\docker-start.ps1
+
+# Linux/Mac
+cd infrastructure && docker-compose up --build -d
 ```
 
-### 3. Initialize Database
+### Step 4: Initialize Database (First Time Only)
 
-```bash
-# Initialize Prisma schema
+```powershell
 docker exec -it primepentrix-web npx prisma db push
-
-# Seed with 8 subjects
 docker exec -it primepentrix-web npx prisma db seed
 ```
 
-🚀 Open http://localhost:3000
+### Step 5: Open
+
+- **App:** http://localhost:3000
+- **Brain API:** http://localhost:8000/docs
+- **Database:** localhost:5432
 
 ---
 
-## 🔧 Troubleshooting
+## Option 2: Local Development
 
-### "Connection url is empty"
+### Step 1: Start PostgreSQL
 
-**Problem:** Prisma can't find DATABASE_URL.
-
-**Solution:** Make sure `.env.local` exists in `web/` directory and contains:
-```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/primepentrix_v3?schema=public"
+**Via Docker (easiest):**
+```bash
+docker run -d \
+  --name pg16-vector \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=primepentrix_v3 \
+  -p 5432:5432 \
+  pgvector/pgvector:pg16
 ```
 
-### "Module not found: @prisma/client"
+**Or install locally** and enable pgvector:
+```sql
+CREATE DATABASE primepentrix_v3;
+\c primepentrix_v3
+CREATE EXTENSION vector;
+```
 
-**Solution:**
+### Step 2: Setup Web (Next.js)
+
 ```bash
 cd web
+
+# Install dependencies
 npm install
-npm run db:generate
+
+# Create environment file
+cp .env.example .env.local
 ```
 
-### Docker build fails with "context not found"
+Edit `web/.env.local`:
 
-**Solution:** Make sure you're running `docker-compose` from the `infrastructure/` directory, not the project root.
-
-### "Port 5432 already in use"
-
-**Solution:** You have PostgreSQL already running locally. Either:
-- Stop your local PostgreSQL: `brew services stop postgresql` (macOS) or `sudo systemctl stop postgresql` (Linux)
-- OR change the port in `docker-compose.yml`: `"5433:5432"`
-
----
-
-## 📋 Development Commands
-
-### Database
+```env
+DATABASE_URL="postgresql://postgres:password@localhost:5432/primepentrix_v3?schema=public"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
+CLERK_SECRET_KEY="sk_test_..."
+CEREBRAS_API_KEY="csk-..."
+```
 
 ```bash
-npm run db:generate  # Generate Prisma Client
-npm run db:push      # Sync schema (no migrations)
-npm run db:migrate   # Create migration files
-npm run db:seed      # Seed with subjects
-npm run db:studio    # Open Prisma Studio GUI
+# Setup database
+npm run db:generate     # Generate Prisma client
+npm run db:push         # Create all 12 tables
+npm run db:seed         # Seed 8 subjects
+
+# Start development server
+npm run dev             # http://localhost:3000
 ```
 
-### Development
+### Step 3: Setup Brain (Optional — Enhanced RAG)
 
 ```bash
-npm run dev          # Start Next.js dev server
-npm run build        # Production build
-npm run start        # Start production server
-npm run lint         # Run ESLint
-npm run format       # Format with Prettier
+cd brain
+
+# Create virtual environment
+python -m venv venv
+venv\Scripts\activate   # Windows
+# source venv/bin/activate  # Mac/Linux
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Download NLP data
+python -m nltk.downloader punkt stopwords
+
+# Start
+uvicorn main:app --reload   # http://localhost:8000
 ```
 
 ---
 
-## 📚 Next Steps
+## Getting Your API Keys
 
-1. **Read the docs**: See `docs/PHASE-1-COMPLETE.md` for full Phase 1 details
-2. **Configure Clerk webhook**: See README.md "Clerk Setup" section
-3. **Explore the codebase**: Start with `web/src/app/page.tsx`
-4. **Check database**: Run `npm run db:studio` to see seeded data
+### Clerk (Required)
+
+1. Go to [clerk.com](https://clerk.com) and create an account
+2. Create a new application
+3. Go to **API Keys** in the dashboard
+4. Copy **Publishable Key** → `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+5. Copy **Secret Key** → `CLERK_SECRET_KEY`
+6. (Optional) Set up webhook at `/api/webhooks/clerk` for user sync
+
+### Cerebras (Recommended — Fastest)
+
+1. Go to [cloud.cerebras.ai](https://cloud.cerebras.ai)
+2. Create an account and generate an API key
+3. Copy key → `CEREBRAS_API_KEY`
+4. Models: `llama-3.3-70b` (default), `llama-4-scout-17b-16e-instruct`
+
+### Google Gemini (Fallback)
+
+1. Go to [aistudio.google.com](https://aistudio.google.com)
+2. Get an API key
+3. Copy key → `GOOGLE_GEMINI_API_KEY`
+
+### OpenAI (Optional)
+
+1. Go to [platform.openai.com](https://platform.openai.com)
+2. Create API key → `OPENAI_API_KEY`
+3. Also used for document embeddings in the Brain service
 
 ---
 
-## 🆘 Need Help?
+## Verify Everything Works
 
-- **Phase 1 Complete**: `docs/PHASE-1-COMPLETE.md`
-- **Prisma 7 Fixes**: `docs/PHASE-1-FIXES.md`
-- **Technical Details**: `docs/TECHNICAL.md`
-- **Architecture**: `docs/HOW_IT_WORKS.md`
+### Check Health
+```bash
+curl http://localhost:3000/api/health
+# { "status": "healthy", "database": "connected", ... }
+```
+
+### Check AI Providers
+```bash
+curl http://localhost:3000/api/ai-providers
+# { "providers": { "cerebras": true, "gemini": false, "openai": false } }
+```
+
+### Open Prisma Studio (Database GUI)
+```bash
+cd web && npm run db:studio
+# Opens at http://localhost:5555
+```
 
 ---
 
-**Happy coding! 🎉**
+## Troubleshooting
+
+| Problem | Solution |
+|---------|---------|
+| `DATABASE_URL` not set | Ensure `.env.local` exists in `web/` with valid connection string |
+| `Error: P1001 Can't reach database` | Start PostgreSQL: `docker start pg16-vector` |
+| `Module not found: prisma` | Run `npm run db:generate` |
+| `Error: Context not found` | Ensure `@prisma/adapter-pg` and `pg` are installed |
+| Port 3000 in use | `npx kill-port 3000` or use `npm run dev -- -p 3001` |
+| Brain API not connecting | Check `NEXT_PUBLIC_BACKEND_URL` in `.env.local` |
+| Clerk redirect loops | Verify `NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"` is set |
+| pgvector extension missing | `docker exec -it pg16-vector psql -U postgres -d primepentrix_v3 -c "CREATE EXTENSION vector;"` |
+| `npm run dev` exits with code 1 | Try `npx next build` first to check for errors, then retry `npm run dev` |
+
+---
+
+## Next Steps
+
+1. Sign in at `http://localhost:3000/sign-in`
+2. Explore the 8 subjects on the dashboard
+3. Open a subject workspace and start chatting
+4. Upload a PDF in the Documents tab
+5. Try the AI Quiz system
+6. Explore the Security Toolkit
+7. Switch themes via the palette icon in the header
+
+---
+
+## Useful Commands Reference
+
+```bash
+# Development
+npm run dev              # Start dev server
+npm run build            # Production build
+npm test                 # Run 55 unit tests
+npm run test:e2e         # Run E2E tests
+npm run lint             # ESLint check
+
+# Database
+npm run db:generate      # Generate Prisma client
+npm run db:push          # Push schema changes
+npm run db:seed          # Seed subjects
+npm run db:studio        # GUI database browser
+npm run db:migrate       # Create migration
+
+# Docker
+.\docker-start.ps1      # Start all services
+.\docker-stop.ps1       # Stop all services
+.\docker-restart.ps1    # Restart services
+```
