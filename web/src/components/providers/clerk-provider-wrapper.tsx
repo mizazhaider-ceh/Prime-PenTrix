@@ -15,8 +15,8 @@ interface ClerkProviderWrapperProps {
   afterSignUpUrl?: string;
 }
 
-// Check if running in E2E test mode
-export const isE2EMode = () => process.env.NEXT_PUBLIC_E2E_TEST === 'true';
+// Check if running in E2E test mode (server-side env var)
+export const isE2EMode = () => process.env.E2E_TEST === 'true';
 
 export function ClerkProviderWrapper({
   children,
