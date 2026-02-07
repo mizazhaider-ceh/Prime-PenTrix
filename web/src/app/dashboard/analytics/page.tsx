@@ -75,6 +75,9 @@ interface DashboardData {
   }>;
 }
 
+// Force dynamic rendering to avoid Clerk validation during static generation in CI
+export const dynamic = 'force-dynamic';
+
 export default function AnalyticsDashboard() {
   const { userId } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
