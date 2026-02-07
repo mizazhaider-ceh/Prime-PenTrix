@@ -5,13 +5,13 @@ import { z } from 'zod';
 import { unlink } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
+import { checkBrainHealth, processDocument, BRAIN_API_URL } from '@/lib/brain-client';
 
 // ═══════════════════════════════════════════════════════════════
 // DOCUMENT [ID] API - Get, Update, Delete individual documents
 // ═══════════════════════════════════════════════════════════════
 
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'documents');
-const BRAIN_API_URL = process.env.BRAIN_API_URL || 'http://localhost:8000';
 
 const patchSchema = z.object({
   action: z.enum(['process', 'retry']).optional(),
@@ -324,41 +324,25 @@ async function triggerBrainProcessing(
   mimeType: string,
   subjectId: string
 ): Promise<void> {
-  // 1. Health check — fail fast if Brain is offline (2s timeout)
-  try {
-    const healthCheck = await fetch(`${BRAIN_API_URL}/health`, {
-      signal: AbortSignal.timeout(2000),
-    });
-    if (!healthCheck.ok) {
-      throw new Error('Brain API health check returned non-OK status');
-    }
-  } catch {
+  // 1. Health check — fail fast if Brain is offline
+  const isHealthy = await checkBrainHealth();
+  if (!isHealthy) {
     throw new Error(
       'ECONNREFUSED: Brain API is not reachable at ' + BRAIN_API_URL
     );
   }
 
-  // 2. Read file and send for processing (30s timeout)
+  // 2. Read file and send for processing (with authentication)
   const { readFile } = await import('fs/promises');
   const fileBuffer = await readFile(filePath);
   const base64Content = fileBuffer.toString('base64');
 
-  const response = await fetch(`${BRAIN_API_URL}/documents/process`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      document_id: documentId,
-      content: base64Content,
-      filename: path.basename(filePath),
-      mime_type: mimeType,
-      subject_id: subjectId,
-      encoding: 'base64',
-    }),
-    signal: AbortSignal.timeout(30000),
+  await processDocument({
+    document_id: documentId,
+    content: base64Content,
+    filename: path.basename(filePath),
+    mime_type: mimeType,
+    subject_id: subjectId,
+    encoding: 'base64',
   });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => 'Unknown error');
-    throw new Error(`Brain API error: ${response.status} - ${errorText}`);
-  }
 }

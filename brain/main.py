@@ -12,8 +12,9 @@ import logging
 from typing import List, Optional
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 import uvicorn
 
@@ -74,13 +75,70 @@ app = FastAPI(
 )
 
 # CORS middleware
+# SECURITY: Explicitly list allowed methods and headers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],  # Specific methods only
+    allow_headers=["Content-Type", "Authorization"],  # Specific headers only
 )
+
+
+# ═══════════════════════════════════════════════════════════════
+# AUTHENTICATION MIDDLEWARE
+# ═══════════════════════════════════════════════════════════════
+
+@app.middleware("http")
+async def verify_api_key(request: Request, call_next):
+    """
+    Verify API key for all requests except /health and /docs.
+    
+    SECURITY: All API calls must include:
+        Authorization: Bearer <BRAIN_API_KEY>
+    """
+    # Allow health checks and docs without authentication
+    if request.url.path in ["/health", "/docs", "/openapi.json", "/redoc"]:
+        return await call_next(request)
+    
+    # Skip authentication if no API key is configured (development only!)
+    if not settings.brain_api_key:
+        logger.warning(f"⚠️  Unauthenticated request to {request.url.path} - NO API KEY SET!")
+        return await call_next(request)
+    
+    # Check Authorization header
+    auth_header = request.headers.get("Authorization")
+    if not auth_header:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Missing Authorization header"},
+        )
+    
+    # Parse Bearer token
+    try:
+        scheme, token = auth_header.split(" ", 1)
+        if scheme.lower() != "bearer":
+            raise ValueError("Invalid authentication scheme")
+    except ValueError:
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "Invalid Authorization header format. Expected: Bearer <token>"},
+        )
+    
+    # Validate API key
+    if token != settings.brain_api_key:
+        logger.warning(f"🚨 Invalid API key attempt from {request.client.host}")
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"detail": "Invalid API key"},
+        )
+    
+    return await call_next(request)
+
+
+# ═══════════════════════════════════════════════════════════════
+# GLOBAL INSTANCES
+# ═══════════════════════════════════════════════════════════════
 
 # Global instances
 chunking_engine = ChunkingEngine(

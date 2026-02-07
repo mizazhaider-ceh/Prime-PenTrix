@@ -4,8 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { AIManager } from '@/lib/ai/manager';
 import { PromptBuilder } from '@/lib/prompts/builder';
-
-const BRAIN_API_URL = process.env.BRAIN_API_URL || 'http://localhost:8000';
+import { queryRAG } from '@/lib/brain-client';
 
 const chatRequestSchema = z.object({
   conversationId: z.string().uuid(),
@@ -79,23 +78,15 @@ export async function POST(req: NextRequest) {
     // Only search documents when explicitly in "Chat with Documents" mode
     if (validatedData.useRag && ragContextDocs.length === 0) {
       try {
-        const ragResponse = await fetch(`${BRAIN_API_URL}/query`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: validatedData.message,
-            subject_id: conversation.subjectId,
-            user_id: user.id,
-            top_k: 5,
-          }),
-          signal: AbortSignal.timeout(10000), // 10s timeout
+        const ragData = await queryRAG({
+          query: validatedData.message,
+          subject_id: conversation.subjectId,
+          user_id: user.id,
+          top_k: 5,
         });
 
-        if (ragResponse.ok) {
-          const ragData = await ragResponse.json();
-          ragContextDocs = ragData.context_chunks || [];
-          ragChunkIds = ragData.chunk_ids || [];
-        }
+        ragContextDocs = ragData.context_chunks || [];
+        ragChunkIds = ragData.chunk_ids || [];
       } catch (ragError) {
         // RAG is optional - continue without context on failure
         console.warn('RAG context retrieval failed (non-blocking):', ragError);

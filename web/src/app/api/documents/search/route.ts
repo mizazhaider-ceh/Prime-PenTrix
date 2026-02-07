@@ -1,13 +1,12 @@
 import { getAuthUser } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { searchDocuments } from '@/lib/brain-client';
 
 // ═══════════════════════════════════════════════════════════════
 // DOCUMENT SEARCH API - Hybrid search via Brain API
 // Combines semantic search (pgvector) + BM25 + cross-encoder reranking
 // ═══════════════════════════════════════════════════════════════
-
-const BRAIN_API_URL = process.env.BRAIN_API_URL || 'http://localhost:8000';
 
 const searchSchema = z.object({
   query: z.string().min(1).max(1000),
@@ -27,32 +26,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validatedData = searchSchema.parse(body);
 
-    // Call Brain API for hybrid search
-    const brainResponse = await fetch(`${BRAIN_API_URL}/search`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: validatedData.query,
-        subject_id: validatedData.subjectId,
-        user_id: user.id,
-        top_k: validatedData.topK,
-        search_type: validatedData.searchType,
-        min_similarity: validatedData.minSimilarity,
-      }),
+    // Call Brain API for hybrid search (with authentication)
+    const searchData = await searchDocuments({
+      query: validatedData.query,
+      subject_id: validatedData.subjectId,
+      user_id: user.id,
+      top_k: validatedData.topK,
+      search_type: validatedData.searchType,
     });
-
-    if (!brainResponse.ok) {
-      const errorText = await brainResponse.text();
-      console.error('Brain search error:', errorText);
-      return NextResponse.json(
-        { error: 'Search service unavailable' },
-        { status: 502 }
-      );
-    }
-
-    const searchData = await brainResponse.json();
 
     return NextResponse.json({
       results: searchData.results || [],

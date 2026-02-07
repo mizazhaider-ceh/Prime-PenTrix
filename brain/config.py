@@ -4,6 +4,7 @@ Lightweight RAG: BM25 + OpenAI API Embeddings
 """
 
 import os
+import logging
 from pydantic_settings import BaseSettings
 
 
@@ -13,12 +14,15 @@ class Settings(BaseSettings):
     # ── App ─────────────────────────────────────────────────
     app_name: str = "Prime PenTrix Brain API"
     version: str = "3.0.0"
-    debug: bool = True
+    debug: bool = False  # SECURITY: Never enable in production!
+
+    # ── Security ────────────────────────────────────────────
+    brain_api_key: str = os.getenv("BRAIN_API_KEY", "")
 
     # ── Database (PostgreSQL + pgvector) ────────────────────
     database_url: str = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:password@localhost:5432/prime_pentrix",
+        "",  # SECURITY: No default password - must be set in .env!
     )
 
     # ── OpenAI API (for embeddings only) ────────────────────
@@ -46,6 +50,36 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+
+
+# ═══════════════════════════════════════════════════════════════
+# VALIDATE SETTINGS
+# ═══════════════════════════════════════════════════════════════
+
+settings = Settings()
+
+# SECURITY: Validate critical settings
+if not settings.database_url:
+    raise ValueError(
+        "DATABASE_URL is not set! Copy .env.example to .env and set a strong password."
+    )
+
+if "password@" in settings.database_url.lower():
+    raise ValueError(
+        "DATABASE_URL contains the default password 'password'! "
+        "Use a strong password in your .env file."
+    )
+
+if settings.debug:
+    logger = logging.getLogger("brain")
+    logger.warning("⚠️  DEBUG MODE ENABLED - Never use in production!")
+
+if not settings.brain_api_key:
+    logger = logging.getLogger("brain")
+    logger.warning(
+        "⚠️  BRAIN_API_KEY not set! API has NO AUTHENTICATION. "
+        "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+    )
 
 
 settings = Settings()
