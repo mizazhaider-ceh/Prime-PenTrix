@@ -13,9 +13,10 @@ import ToolExecutor from './ToolExecutor';
 
 interface ToolsTabProps {
   subjectCode: string;
+  subjectId: string;
 }
 
-export default function ToolsTab({ subjectCode }: ToolsTabProps) {
+export default function ToolsTab({ subjectCode, subjectId }: ToolsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ToolCategory | 'all' | 'recommended'>('recommended');
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
@@ -213,7 +214,7 @@ export default function ToolsTab({ subjectCode }: ToolsTabProps) {
               </Button>
             </div>
             <div className="flex-1 min-h-0 overflow-hidden">
-              <ToolExecutor tool={selectedTool} onClose={() => setSelectedTool(null)} />
+              <ToolExecutor tool={selectedTool} subjectId={subjectId} onClose={() => setSelectedTool(null)} />
             </div>
           </div>
         ) : (

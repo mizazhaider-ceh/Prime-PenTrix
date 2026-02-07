@@ -283,7 +283,7 @@ export default function WorkspacePage() {
             </TabsContent>
 
             <TabsContent value="tools" className="m-0 h-full">
-              <ToolsTab subjectCode={subject.code} />
+              <ToolsTab subjectCode={subject.code} subjectId={subject.id} />
             </TabsContent>
 
             <TabsContent value="quiz" className="m-0 h-full">

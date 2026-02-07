@@ -16,10 +16,11 @@ import { toast } from 'sonner';
 
 interface ToolExecutorProps {
   tool: Tool;
+  subjectId: string;
   onClose: () => void;
 }
 
-export default function ToolExecutor({ tool, onClose }: ToolExecutorProps) {
+export default function ToolExecutor({ tool, subjectId, onClose }: ToolExecutorProps) {
   const [inputs, setInputs] = useState<Record<string, any>>(tool.exampleInputs || {});
   const [isExecuting, setIsExecuting] = useState(false);
   const [result, setResult] = useState<ToolOutput | null>(null);
@@ -55,7 +56,7 @@ export default function ToolExecutor({ tool, onClose }: ToolExecutorProps) {
       const response = await fetch('/api/tools/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toolId: tool.id, inputs }),
+        body: JSON.stringify({ toolId: tool.id, inputs, subjectId }),
       });
 
       const data = await response.json();

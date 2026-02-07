@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { withAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { executeTool } from '@/lib/tools/executor';
 import { getToolById } from '@/lib/tools/registry';
 
@@ -8,17 +9,10 @@ import { getToolById } from '@/lib/tools/registry';
 // POST /api/tools/execute
 // ═══════════════════════════════════════════════════════════════
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
-    // Authentication check
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Parse request body
     const body = await request.json();
-    const { toolId, inputs } = body;
+    const { toolId, inputs, subjectId } = body;
 
     if (!toolId) {
       return NextResponse.json({ error: 'Missing toolId in request body' }, { status: 400 });
@@ -33,15 +27,31 @@ export async function POST(request: NextRequest) {
     // Execute the tool
     const result = await executeTool(toolId, inputs || {});
 
-    // Log execution (optional - can save to database for analytics)
-    // await prisma.toolExecution.create({
-    //   data: {
-    //     toolId,
-    //     userId,
-    //     inputs,
-    //     output: result,
-    //   },
-    // });
+    // Log execution to ToolHistory for analytics dashboard
+    if (subjectId) {
+      try {
+        await prisma.toolHistory.create({
+          data: {
+            toolId,
+            toolCategory: tool.category,
+            inputData: inputs || {},
+            outputData: result as any,
+            userId: user.id,
+            subjectId,
+          },
+        });
+
+        // Update global stats tool count
+        await prisma.globalStats.upsert({
+          where: { userId: user.id },
+          update: { totalToolUses: { increment: 1 } },
+          create: { userId: user.id, totalToolUses: 1 },
+        });
+      } catch (logError) {
+        // Logging failure should not break tool execution
+        console.warn('Tool history logging failed (non-blocking):', logError);
+      }
+    }
 
     return NextResponse.json(result, { status: 200 });
   } catch (error: any) {
@@ -54,7 +64,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});
 
 // ═══════════════════════════════════════════════════════════════
 // GET TOOL INFO
