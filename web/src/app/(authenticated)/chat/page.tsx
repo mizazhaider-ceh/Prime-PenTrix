@@ -3,9 +3,6 @@
 import ConversationSidebar from '@/components/chat/ConversationSidebar';
 import ChatInterface from '@/components/chat/ChatInterface';
 
-// Force dynamic rendering to avoid Clerk validation during static generation in CI
-export const dynamic = 'force-dynamic';
-
 export default function ChatPage() {
   return (
     <div className="flex h-screen">
