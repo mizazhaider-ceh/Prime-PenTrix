@@ -21,35 +21,36 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 // Force dynamic rendering to avoid Clerk validation during static generation in CI
 export const dynamic = 'force-dynamic';
-import dynamic from 'next/dynamic';
+
+import dynamicImport from 'next/dynamic';
 import { useChatStore } from '@/store/chatStore';
 import { useChatActions } from '@/hooks/useChatActions';
 import { useSessionTracking } from '@/hooks/useSessionTracking';
 import { useEffect, useState, useCallback } from 'react';
 
 // Lazy-load heavy tab components for faster initial render
-const ConversationSidebar = dynamic(() => import('@/components/chat/ConversationSidebar'), {
+const ConversationSidebar = dynamicImport(() => import('@/components/chat/ConversationSidebar'), {
   ssr: false,
   loading: () => <div className="w-72 animate-pulse bg-muted/20" />,
 });
 
-const ChatInterface = dynamic(() => import('@/components/chat/ChatInterface'), {
+const ChatInterface = dynamicImport(() => import('@/components/chat/ChatInterface'), {
   ssr: false,
   loading: () => <div className="flex-1 flex items-center justify-center"><Skeleton className="h-32 w-64 rounded-xl" /></div>,
 });
 
-const DocumentsTab = dynamic(() => import('@/components/documents/DocumentsTab'), {
+const DocumentsTab = dynamicImport(() => import('@/components/documents/DocumentsTab'), {
   ssr: false,
   loading: () => <div className="flex h-full items-center justify-center"><Skeleton className="h-64 w-96 rounded-xl" /></div>,
 });
 
-const ToolsTab = dynamic(() => import('@/components/tools/ToolsTab'), {
+const ToolsTab = dynamicImport(() => import('@/components/tools/ToolsTab'), {
   ssr: false,
   loading: () => <div className="flex h-full items-center justify-center"><Skeleton className="h-64 w-96 rounded-xl" /></div>,
 });
 
 // Dynamic import to avoid SSR hydration mismatch from Radix Select useId()
-const QuizTab = dynamic(() => import('@/components/quiz/QuizTab'), {
+const QuizTab = dynamicImport(() => import('@/components/quiz/QuizTab'), {
   ssr: false,
   loading: () => <div className="flex h-full items-center justify-center"><Skeleton className="h-64 w-96 rounded-xl" /></div>,
 });
