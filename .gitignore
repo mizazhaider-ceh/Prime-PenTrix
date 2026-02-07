@@ -128,6 +128,10 @@ coverage/
 .nyc_output/
 tests/__pycache__/
 .pytest_cache/
+test-results/
+web/test-results/
+playwright-report/
+web/playwright-report/
 
 # ──────────────────────────────────────────────────────────────
 # BUILD ARTIFACTS

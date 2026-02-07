@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════
 # Prime-Pentrix Web - Dockerfile
-# Next.js 15 frontend with multi-stage build
+# Next.js 16 frontend with multi-stage build
 # ═══════════════════════════════════════════════════════════════
 
 FROM node:22-alpine AS base
