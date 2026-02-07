@@ -20,9 +20,9 @@ export default function DocumentsTab({ subjectId }: DocumentsTabProps) {
   const [activePanel, setActivePanel] = useState<'docs' | 'chat'>('docs');
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full overflow-hidden">
       {/* ── Left Panel: Document Management ── */}
-      <div className="w-[380px] flex-shrink-0 border-r border-border/20 flex flex-col overflow-hidden glass-subtle">
+      <div className={`${activePanel === 'docs' ? 'flex' : 'hidden'} md:flex w-full md:w-[380px] flex-shrink-0 min-h-0 border-r border-border/20 flex-col overflow-hidden`}>
         {/* Panel Header */}
         <div className="flex-shrink-0 border-b border-border/20 px-4 py-3">
           <div className="flex items-center justify-between mb-2">
@@ -49,13 +49,13 @@ export default function DocumentsTab({ subjectId }: DocumentsTabProps) {
         </div>
 
         {/* Document List */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
           <DocumentList subjectId={subjectId} />
         </div>
       </div>
 
       {/* ── Right Panel: Chat with Documents ── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`${activePanel === 'chat' ? 'flex' : 'hidden'} md:flex flex-1 flex-col min-h-0 overflow-hidden`}>
         {/* RAG Chat Header Badge */}
         <div className="flex-shrink-0 border-b border-border/20 px-4 py-2 glass-subtle">
           <div className="flex items-center gap-2">
@@ -76,7 +76,7 @@ export default function DocumentsTab({ subjectId }: DocumentsTabProps) {
         </div>
 
         {/* RAG-powered DocumentChatInterface — completely independent state */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden">
           <DocumentChatInterface subjectId={subjectId} />
         </div>
       </div>
@@ -85,20 +85,22 @@ export default function DocumentsTab({ subjectId }: DocumentsTabProps) {
       <div className="fixed bottom-20 right-4 z-50 flex gap-2 md:hidden">
         <button
           onClick={() => setActivePanel('docs')}
-          className={`flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition-all ${
+          aria-label="Show documents"
+          className={`flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition-all duration-200 ${
             activePanel === 'docs'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-card text-muted-foreground border border-border/30'
+              ? 'bg-primary text-primary-foreground scale-110'
+              : 'bg-card text-muted-foreground border border-border/30 hover:bg-card/80'
           }`}
         >
           <FileText className="h-4 w-4" />
         </button>
         <button
           onClick={() => setActivePanel('chat')}
-          className={`flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition-all ${
+          aria-label="Show chat"
+          className={`flex h-10 w-10 items-center justify-center rounded-full shadow-lg transition-all duration-200 ${
             activePanel === 'chat'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-card text-muted-foreground border border-border/30'
+              ? 'bg-primary text-primary-foreground scale-110'
+              : 'bg-card text-muted-foreground border border-border/30 hover:bg-card/80'
           }`}
         >
           <MessageSquare className="h-4 w-4" />

@@ -121,22 +121,33 @@ export async function POST(req: NextRequest) {
     // Initialize AI manager with user preferences
     const preferredProvider = userPreferredProvider || (process.env.PREFERRED_AI_PROVIDER as 'cerebras' | 'gemini' | 'openai') || 'cerebras';
     
+    // Helper: check if an API key is a real key (not a placeholder)
+    const isValidKey = (key: string | undefined): key is string => {
+      if (!key) return false;
+      const lower = key.toLowerCase().trim();
+      return !lower.includes('your') && !lower.includes('here') && !lower.includes('placeholder') && !lower.includes('xxx') && lower.length > 10;
+    };
+
+    const cerebrasKey = process.env.CEREBRAS_API_KEY;
+    const geminiKey = process.env.GOOGLE_GEMINI_API_KEY;
+    const openaiKey = process.env.OPENAI_CHAT_API_KEY;
+
     const aiManager = new AIManager({
-      cerebras: process.env.CEREBRAS_API_KEY
+      cerebras: isValidKey(cerebrasKey)
         ? {
-            apiKey: process.env.CEREBRAS_API_KEY,
+            apiKey: cerebrasKey,
             model: (preferredProvider === 'cerebras' && userPreferredModel) ? userPreferredModel : (process.env.CEREBRAS_MODEL || 'llama3.1-8b'),
           }
         : undefined,
-      gemini: process.env.GOOGLE_GEMINI_API_KEY
+      gemini: isValidKey(geminiKey)
         ? {
-            apiKey: process.env.GOOGLE_GEMINI_API_KEY,
+            apiKey: geminiKey,
             model: (preferredProvider === 'gemini' && userPreferredModel) ? userPreferredModel : (process.env.GEMINI_MODEL || 'gemini-1.5-flash'),
           }
         : undefined,
-      openai: process.env.OPENAI_CHAT_API_KEY
+      openai: isValidKey(openaiKey)
         ? {
-            apiKey: process.env.OPENAI_CHAT_API_KEY,
+            apiKey: openaiKey,
             model: (preferredProvider === 'openai' && userPreferredModel) ? userPreferredModel : (process.env.OPENAI_CHAT_MODEL || 'gpt-4o'),
           }
         : undefined,
@@ -150,6 +161,7 @@ export async function POST(req: NextRequest) {
     let fullResponse = '';
     let provider = '';
     let model = '';
+    let assistantSaved = false; // Guard against duplicate saves
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -173,7 +185,8 @@ export async function POST(req: NextRequest) {
               controller.enqueue(encoder.encode(`data: ${data}\n\n`));
             }
 
-            if (chunk.done) {
+            if (chunk.done && !assistantSaved) {
+              assistantSaved = true; // Prevent double save
               provider = (chunk as any).provider || 'unknown';
               model = (chunk as any).model || 'unknown';
               

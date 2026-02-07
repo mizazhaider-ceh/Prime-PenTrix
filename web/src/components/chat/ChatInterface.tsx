@@ -139,19 +139,46 @@ export default function ChatInterface({
             }
 
             if (data.done) {
-              // Finalize the message — fetch full record then do ATOMIC state update
+              // Build message locally from streaming content — avoids network round-trip
+              // that caused a visible content swap ("double response" effect)
+              const streamingContent = useChatStore.getState().streamingMessage;
               if (data.messageId && currentConversation) {
-                const msgResponse = await fetch(`/api/messages/${data.messageId}`);
-                if (msgResponse.ok) {
-                  const msgData = await msgResponse.json();
-                  if (msgData.message) {
-                    // ATOMIC: add message + clear streaming + set isStreaming=false in ONE render
-                    finalizeStreamingMessage(msgData.message);
-                    continue; // skip the manual cleanup below
-                  }
-                }
+                // Grab user info from existing messages (assistant messages share the same userId)
+                const existingUser = useChatStore.getState().messages.find(m => m.user)?.user || {
+                  name: 'AI Assistant',
+                  email: '',
+                  avatarUrl: null,
+                };
+
+                const localMessage = {
+                  id: data.messageId,
+                  role: 'assistant' as const,
+                  content: streamingContent,
+                  conversationId: currentConversation.id,
+                  userId: currentConversation.messages?.[0]?.userId || '',
+                  model: data.model || null,
+                  tokenCount: streamingContent.split(/\s+/).length,
+                  contextUsed: [] as string[],
+                  createdAt: new Date(),
+                  user: existingUser,
+                };
+
+                // ATOMIC: add message + clear streaming + set isStreaming=false in ONE render
+                finalizeStreamingMessage(localMessage);
+
+                // Background sync: fetch full DB record for accurate metadata (no UI swap)
+                fetch(`/api/messages/${data.messageId}`)
+                  .then(r => r.ok ? r.json() : null)
+                  .then(msgData => {
+                    if (msgData?.message) {
+                      useChatStore.getState().updateMessage(data.messageId, msgData.message);
+                    }
+                  })
+                  .catch(() => { /* silent — local message is already displayed */ });
+
+                continue; // skip the manual cleanup below
               }
-              // Fallback if fetch failed
+              // Fallback if no messageId
               setIsStreaming(false);
               clearStreamingMessage();
             }
@@ -208,7 +235,7 @@ export default function ChatInterface({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
         {isLoadingMessages ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
@@ -318,9 +345,8 @@ export default function ChatInterface({
               }}
               placeholder={placeholder}
               disabled={isSendingMessage || isStreaming}
-              className="flex-1 bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed resize-none custom-scrollbar"
+              className="flex-1 bg-transparent px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed resize-none max-h-[120px] custom-scrollbar"
               rows={1}
-              style={{ maxHeight: '120px' }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';

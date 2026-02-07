@@ -194,9 +194,9 @@ export default function ConversationSidebar({ subjectId }: ConversationSidebarPr
   };
 
   return (
-    <div className="flex flex-col h-full custom-scrollbar">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-border/20">
+      <div className="flex-shrink-0 max-h-[45%] overflow-y-auto custom-scrollbar p-4 border-b border-border/20">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-outfit text-sm font-bold tracking-tight text-foreground">
             Conversations
@@ -336,14 +336,14 @@ export default function ConversationSidebar({ subjectId }: ConversationSidebarPr
       </div>
 
       {/* Conversations List */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
         {isLoadingConversations ? (
           <div className="flex items-center justify-center h-32">
             <div className="typing-indicator">
               <span></span><span></span><span></span>
             </div>
           </div>
-        ) : conversations.length === 0 ? (
+        ) : conversations.filter(c => c.mode !== 'doc-chat').length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
             <MessageSquare size={24} className="mb-2 opacity-30" />
             <p className="text-xs">No conversations yet</p>
@@ -351,7 +351,7 @@ export default function ConversationSidebar({ subjectId }: ConversationSidebarPr
           </div>
         ) : (
           <div className="p-2 space-y-0.5">
-            {conversations.map((conv) => (
+            {conversations.filter(c => c.mode !== 'doc-chat').map((conv) => (
               <div
                 key={conv.id}
                 onClick={() => handleSelectConversation(conv.id)}

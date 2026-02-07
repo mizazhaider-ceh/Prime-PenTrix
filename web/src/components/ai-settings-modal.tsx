@@ -147,6 +147,7 @@ export function AISettingsModal() {
   const [selectedProvider, setSelectedProvider] = useState<string>('cerebras');
   const [selectedModel, setSelectedModel] = useState<string>('llama-3.3-70b');
   const [mounted, setMounted] = useState(false);
+  const [providerStatus, setProviderStatus] = useState<Record<string, boolean>>({});
 
   // Load preferences from localStorage on mount
   useEffect(() => {
@@ -156,6 +157,12 @@ export function AISettingsModal() {
     
     if (savedProvider) setSelectedProvider(savedProvider);
     if (savedModel) setSelectedModel(savedModel);
+
+    // Fetch which providers actually have valid API keys
+    fetch('/api/ai-providers')
+      .then((res) => res.json())
+      .then((data) => setProviderStatus(data.providers || {}))
+      .catch(() => {}); // silently fail
   }, []);
 
   // Save preferences whenever they change
@@ -175,8 +182,17 @@ export function AISettingsModal() {
   const currentModels = currentProvider?.models || [];
   const ProviderIcon = currentProvider?.icon || Cpu;
 
-  // Reset model when provider changes
+  // Reset model when provider changes — auto-redirect to available provider if selected one has no key
   const handleProviderChange = (providerId: string) => {
+    // If the selected provider has no valid key, redirect to first available
+    if (Object.keys(providerStatus).length > 0 && providerStatus[providerId] === false) {
+      const firstAvailable = AI_PROVIDERS.find(p => providerStatus[p.id] !== false);
+      if (firstAvailable) {
+        setSelectedProvider(firstAvailable.id);
+        setSelectedModel(firstAvailable.models[0].id);
+        return;
+      }
+    }
     setSelectedProvider(providerId);
     const provider = AI_PROVIDERS.find(p => p.id === providerId);
     if (provider && provider.models.length > 0) {
@@ -230,11 +246,18 @@ export function AISettingsModal() {
               <SelectContent>
                 {AI_PROVIDERS.map((provider) => {
                   const Icon = provider.icon;
+                  const isAvailable = providerStatus[provider.id] !== false;
                   return (
-                    <SelectItem key={provider.id} value={provider.id}>
+                    <SelectItem key={provider.id} value={provider.id} disabled={!isAvailable && Object.keys(providerStatus).length > 0}>
                       <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" style={{ color: provider.color }} />
-                        <span className="font-medium">{provider.name}</span>
+                        <Icon className="h-4 w-4" style={{ color: isAvailable ? provider.color : '#6b7280' }} />
+                        <span className={`font-medium ${!isAvailable ? 'text-muted-foreground line-through' : ''}`}>{provider.name}</span>
+                        {isAvailable && (
+                          <span className="ml-1 rounded bg-green-500/10 px-1.5 py-0.5 text-[9px] font-bold text-green-500">READY</span>
+                        )}
+                        {!isAvailable && Object.keys(providerStatus).length > 0 && (
+                          <span className="ml-1 rounded bg-destructive/10 px-1.5 py-0.5 text-[9px] font-bold text-destructive">NO KEY</span>
+                        )}
                       </div>
                     </SelectItem>
                   );
@@ -308,12 +331,22 @@ export function AISettingsModal() {
           </div>
 
           {/* Info Note */}
-          <div className="rounded-lg bg-primary/5 border border-primary/10 p-3">
-            <p className="text-xs text-muted-foreground">
-              💡 <strong>Note:</strong> Your API keys are configured in environment variables. 
-              Make sure you have valid credentials for the selected provider.
-            </p>
-          </div>
+          {Object.keys(providerStatus).length > 0 && providerStatus[selectedProvider] === false ? (
+            <div className="rounded-lg bg-destructive/5 border border-destructive/20 p-3">
+              <p className="text-xs text-destructive">
+                ⚠️ <strong>{currentProvider?.name}</strong> does not have a valid API key configured.
+                Requests will automatically fall back to an available provider.
+                Add a real API key in your <code className="rounded bg-destructive/10 px-1">.env.local</code> file.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg bg-primary/5 border border-primary/10 p-3">
+              <p className="text-xs text-muted-foreground">
+                💡 <strong>Note:</strong> Your API keys are configured in environment variables. 
+                Make sure you have valid credentials for the selected provider.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2 pt-2">

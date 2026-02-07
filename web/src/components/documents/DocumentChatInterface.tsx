@@ -243,9 +243,9 @@ export default function DocumentChatInterface({ subjectId }: DocumentChatInterfa
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
         {messages.length === 0 && !isStreaming ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-fade-in-scale text-center max-w-md px-8">
