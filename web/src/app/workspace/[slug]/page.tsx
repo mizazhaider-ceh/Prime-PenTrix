@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { AISettingsModal } from '@/components/ai-settings-modal';
-import { UserButton } from '@clerk/nextjs';
+import { UserButton } from '@/components/clerk/UserButton';
 import {
   ArrowLeft,
   MessageSquare,

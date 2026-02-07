@@ -141,6 +141,7 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://user:pass@localhost:5432/db' }}
       SKIP_ENV_VALIDATION: 'true'
       NODE_ENV: 'test'
+      NEXT_PUBLIC_E2E_TEST: 'true'
 
     steps:
       - uses: actions/checkout@v4

@@ -1,6 +1,6 @@
 'use client';
 
-import { UserButton } from '@clerk/nextjs';
+import { UserButton } from '@/components/clerk/UserButton';
 import { ThemeSwitcher } from './theme-switcher';
 import { AISettingsModal } from './ai-settings-modal';
 import { Sparkles, LayoutDashboard, Info } from 'lucide-react';

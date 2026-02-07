@@ -30,7 +30,7 @@ import {
   Rocket,
   Heart,
 } from 'lucide-react';
-import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs';
+import { UserButton, SignedIn, SignedOut } from '@/components/clerk/UserButton';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 
 /* ─── Data ─── */
