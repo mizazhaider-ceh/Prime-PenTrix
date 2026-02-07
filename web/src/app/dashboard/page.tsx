@@ -10,9 +10,6 @@ import { AlertCircle, Flame, MessageSquare, FileText, Brain, Sparkles } from 'lu
 import OnboardingModal from '@/components/onboarding/OnboardingModal';
 import { Footer } from '@/components/footer';
 
-// Force dynamic rendering to avoid Clerk validation during static generation in CI
-export const dynamic = 'force-dynamic';
-
 async function fetchSubjects(): Promise<Subject[]> {
   const res = await fetch('/api/subjects');
   if (!res.ok) {

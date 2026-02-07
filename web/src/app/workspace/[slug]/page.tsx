@@ -18,10 +18,6 @@ import {
   Menu,
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// Force dynamic rendering to avoid Clerk validation during static generation in CI
-export const dynamic = 'force-dynamic';
-
 import dynamicImport from 'next/dynamic';
 import { useChatStore } from '@/store/chatStore';
 import { useChatActions } from '@/hooks/useChatActions';
