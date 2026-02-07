@@ -4,9 +4,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Home, ArrowLeft } from 'lucide-react';
 
-// Force dynamic rendering to avoid Clerk validation during static generation in CI
-export const dynamic = 'force-dynamic';
-
 export default function NotFound() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-muted/20">

@@ -6,6 +6,9 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 import { Toaster } from 'sonner';
 import './globals.css';
 
+// Force dynamic rendering for entire app to prevent Clerk validation errors during static generation in CI
+export const dynamic = 'force-dynamic';
+
 const inter = Inter({
   variable: '--font-inter',
   subsets: ['latin'],
