@@ -22,8 +22,12 @@ const mockAuth = {
  * Wrapper hook for Clerk's useAuth that returns mock data in E2E test mode
  */
 export function useAuth() {
+  // Must call hook unconditionally (Rules of Hooks)
+  const clerkAuth = useClerkAuth();
+  
+  // Return mock in E2E mode, otherwise real Clerk auth
   if (isE2EMode()) {
     return mockAuth;
   }
-  return useClerkAuth();
+  return clerkAuth;
 }
