@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
@@ -30,8 +30,8 @@ interface Question {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getAuthUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -49,15 +49,6 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid request data' },
         { status: 400 }
       );
-    }
-
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId }
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Grade quiz (AI-powered for text answers)
@@ -538,23 +529,14 @@ function calculateSM2(
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getAuthUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const subjectId = searchParams.get('subjectId');
     const limit = parseInt(searchParams.get('limit') || '10');
-
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId }
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
 
     // Build query
     const where: any = {

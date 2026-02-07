@@ -8,14 +8,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getAuthUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 // POST /api/analytics/session - Create or update session
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getAuthUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -28,15 +28,6 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields' },
         { status: 400 }
       );
-    }
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId }
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     // Check if session already exists
@@ -104,8 +95,8 @@ export async function POST(request: NextRequest) {
 // GET /api/analytics/session - Get user sessions
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const user = await getAuthUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -113,15 +104,6 @@ export async function GET(request: NextRequest) {
     const subjectId = searchParams.get('subjectId');
     const limit = parseInt(searchParams.get('limit') || '50');
     const days = parseInt(searchParams.get('days') || '30');
-
-    // Get user from database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId }
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
 
     // Calculate date range
     const startDate = new Date();

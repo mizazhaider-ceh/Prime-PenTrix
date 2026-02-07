@@ -1,5 +1,27 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import type { User } from '@prisma/client';
+
+// ═══════════════════════════════════════════════════════════════
+// AUTH WRAPPER — Eliminates boilerplate in API routes
+// Usage: export const POST = withAuth(async (req, user) => { ... });
+// ═══════════════════════════════════════════════════════════════
+
+type AuthenticatedHandler = (
+  req: NextRequest,
+  user: User
+) => Promise<Response | NextResponse>;
+
+export function withAuth(handler: AuthenticatedHandler) {
+  return async (req: NextRequest) => {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    return handler(req, user);
+  };
+}
 
 /**
  * Get the authenticated user from the database, auto-creating if needed.
