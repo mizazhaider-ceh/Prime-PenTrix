@@ -6,7 +6,9 @@ import { SubjectCard } from '@/components/subject-card';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, TrendingUp, Flame, MessageSquare, FileText, Brain, Sparkles } from 'lucide-react';
+import { AlertCircle, Flame, MessageSquare, FileText, Brain, Sparkles } from 'lucide-react';
+import OnboardingModal from '@/components/onboarding/OnboardingModal';
+import { Footer } from '@/components/footer';
 
 async function fetchSubjects(): Promise<Subject[]> {
   const res = await fetch('/api/subjects');
@@ -16,17 +18,32 @@ async function fetchSubjects(): Promise<Subject[]> {
   return res.json();
 }
 
+async function fetchDashboardStats() {
+  const res = await fetch('/api/analytics/dashboard');
+  if (!res.ok) return null;
+  return res.json();
+}
+
 export default function DashboardPage() {
   const { data: subjects, isLoading, error } = useQuery({
     queryKey: ['subjects'],
     queryFn: fetchSubjects,
   });
 
+  const { data: dashboardData } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: fetchDashboardStats,
+    staleTime: 60_000, // refresh every minute
+  });
+
+  const stats = dashboardData?.globalStats;
+  const periodStats = dashboardData?.periodStats;
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <DashboardHeader />
 
-      <main className="container mx-auto px-6 py-8">
+      <main className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Welcome Section */}
         <div className="animate-fade-in-up mb-10">
           <div className="flex items-center gap-3 mb-2">
@@ -43,10 +60,10 @@ export default function DashboardPage() {
         {/* Quick Stats */}
         <div className="animate-fade-in-up mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 stagger-children" style={{ animationDelay: '0.1s' }}>
           {[
-            { label: 'Study Streak', value: '0 days', icon: Flame, color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
-            { label: 'Total Chats', value: '0', icon: MessageSquare, color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)' },
-            { label: 'Documents', value: '0', icon: FileText, color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.1)' },
-            { label: 'Quizzes Taken', value: '0', icon: Brain, color: '#a855f7', bgColor: 'rgba(168, 85, 247, 0.1)' },
+            { label: 'Study Streak', value: stats ? `${stats.currentStreak} days` : '—', icon: Flame, color: '#f59e0b', bgColor: 'rgba(245, 158, 11, 0.1)' },
+            { label: 'Total Chats', value: periodStats ? `${periodStats.totalMessages}` : '—', icon: MessageSquare, color: '#3b82f6', bgColor: 'rgba(59, 130, 246, 0.1)' },
+            { label: 'Documents', value: periodStats ? `${periodStats.totalDocuments}` : '—', icon: FileText, color: '#22c55e', bgColor: 'rgba(34, 197, 94, 0.1)' },
+            { label: 'Quizzes Taken', value: stats ? `${stats.totalQuizzes ?? 0}` : '—', icon: Brain, color: '#a855f7', bgColor: 'rgba(168, 85, 247, 0.1)' },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -117,6 +134,11 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+
+      {/* First-visit onboarding tour */}
+      <OnboardingModal />
+      
+      <Footer />
     </div>
   );
 }

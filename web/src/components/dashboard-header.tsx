@@ -3,7 +3,7 @@
 import { UserButton } from '@clerk/nextjs';
 import { ThemeSwitcher } from './theme-switcher';
 import { AISettingsModal } from './ai-settings-modal';
-import { Sparkles, LayoutDashboard } from 'lucide-react';
+import { Sparkles, LayoutDashboard, Info } from 'lucide-react';
 import Link from 'next/link';
 
 export function DashboardHeader() {
@@ -35,6 +35,13 @@ export function DashboardHeader() {
           >
             <LayoutDashboard className="h-4 w-4" />
             Dashboard
+          </Link>
+          <Link
+            href="/info"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Info className="h-4 w-4" />
+            About
           </Link>
         </div>
 
