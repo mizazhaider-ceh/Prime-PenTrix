@@ -144,25 +144,27 @@ const STORAGE_KEY_MODEL = 'ai-settings-model';
 
 export function AISettingsModal() {
   const [open, setOpen] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<string>('cerebras');
-  const [selectedModel, setSelectedModel] = useState<string>('llama-3.3-70b');
+  const [selectedProvider, setSelectedProvider] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'cerebras';
+    return localStorage.getItem(STORAGE_KEY_PROVIDER) || 'cerebras';
+  });
+  const [selectedModel, setSelectedModel] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'llama-3.3-70b';
+    return localStorage.getItem(STORAGE_KEY_MODEL) || 'llama-3.3-70b';
+  });
   const [mounted, setMounted] = useState(false);
   const [providerStatus, setProviderStatus] = useState<Record<string, boolean>>({});
 
-  // Load preferences from localStorage on mount
+  // Fetch provider status on mount
   useEffect(() => {
-    setMounted(true);
-    const savedProvider = localStorage.getItem(STORAGE_KEY_PROVIDER);
-    const savedModel = localStorage.getItem(STORAGE_KEY_MODEL);
-    
-    if (savedProvider) setSelectedProvider(savedProvider);
-    if (savedModel) setSelectedModel(savedModel);
-
     // Fetch which providers actually have valid API keys
     fetch('/api/ai-providers')
       .then((res) => res.json())
       .then((data) => setProviderStatus(data.providers || {}))
       .catch(() => {}); // silently fail
+    
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Valid use case: hydration guard
+    setMounted(true);
   }, []);
 
   // Save preferences whenever they change

@@ -20,19 +20,24 @@ export default function ToolsTab({ subjectCode, subjectId }: ToolsTabProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ToolCategory | 'all' | 'recommended'>('recommended');
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
-  const [recentTools, setRecentTools] = useState<string[]>([]);
-  const [favoriteTools, setFavoriteTools] = useState<string[]>([]);
-
-  useEffect(() => {
+  const [recentTools, setRecentTools] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
     try {
       const recent = localStorage.getItem('recentTools');
-      const favorites = localStorage.getItem('favoriteTools');
-      if (recent) setRecentTools(JSON.parse(recent));
-      if (favorites) setFavoriteTools(JSON.parse(favorites));
+      return recent ? JSON.parse(recent) : [];
     } catch {
-      // Ignore corrupted localStorage
+      return [];
     }
-  }, []);
+  });
+  const [favoriteTools, setFavoriteTools] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const favorites = localStorage.getItem('favoriteTools');
+      return favorites ? JSON.parse(favorites) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Memoize filtered tools
   const filteredTools = useMemo((): Tool[] => {

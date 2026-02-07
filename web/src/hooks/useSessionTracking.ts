@@ -42,8 +42,8 @@ export function useSessionTracking({
   const [isActive, setIsActive] = useState(true);
   
   const sessionIdRef = useRef<string | null>(null);
-  const startTimeRef = useRef<number>(Date.now());
-  const lastActivityRef = useRef<number>(Date.now());
+  const startTimeRef = useRef<number>(0);
+  const lastActivityRef = useRef<number>(0);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const saveIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const accumulatedTimeRef = useRef<number>(0); // Accumulated active time
@@ -61,6 +61,7 @@ export function useSessionTracking({
   }, [isActive]);
 
   // Save session to backend
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- Memoization is correctly preserved via getSessionDuration dependency
   const saveSession = useCallback(async (endSession = false) => {
     if (!userId || !sessionIdRef.current) return;
 
@@ -134,6 +135,7 @@ export function useSessionTracking({
     lastActivityRef.current = Date.now();
     accumulatedTimeRef.current = 0;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Valid use case: session initialization on user/subject change
     setSession({
       sessionId: newSessionId,
       startedAt: new Date(),

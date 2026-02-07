@@ -191,7 +191,7 @@ export function NoReviewQuestionsEmpty() {
       <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mb-6 max-w-md">
         <p className="text-sm text-green-700 dark:text-green-300">
           Great job staying on top of your reviews! The spaced repetition algorithm will 
-          remind you when it's time to review again.
+          remind you when it&apos;s time to review again.
         </p>
       </div>
     </EmptyState>

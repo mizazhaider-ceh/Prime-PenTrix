@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     // Apply time filter
     if (timeFilter) {
       const now = new Date();
-      let startDate = new Date();
+      const startDate = new Date();
 
       if (timeFilter === 'today') {
         startDate.setHours(0, 0, 0, 0);

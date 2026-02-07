@@ -550,7 +550,7 @@ Local: ${result.local}
 export function previewMarkdown(markdown: string): ToolOutput {
   try {
     // Basic markdown to HTML conversion (simplified)
-    let html = markdown
+    const html = markdown
       // Headers
       .replace(/^### (.*$)/gim, '<h3>$1</h3>')
       .replace(/^## (.*$)/gim, '<h2>$1</h2>')
