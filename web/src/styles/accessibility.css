@@ -1,0 +1,30 @@
+/* ═══════════════════════════════════════════════════════════════
+   ACCESSIBILITY — Focus ring, theme transitions, reduced motion
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Enhanced focus ring */
+.focus-ring-enhanced:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-background),
+              0 0 0 5px var(--color-accent),
+              0 0 20px rgba(var(--primary-rgb, 52, 211, 153), 0.4);
+}
+
+/* Smooth color transition — scoped to theme switch only.
+   JS toggles .theme-transitioning on <html> during theme changes. */
+.theme-transitioning,
+.theme-transitioning * {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease !important;
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

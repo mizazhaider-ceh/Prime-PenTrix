@@ -1,0 +1,23 @@
+/* ═══════════════════════════════════════════════════════════════
+   CHAT BUBBLE SYSTEM (THEME-AWARE)
+   ═══════════════════════════════════════════════════════════════ */
+
+.chat-bubble-user {
+  background: var(--color-accent-dim);
+  border: 1px solid var(--color-border-custom);
+  border-radius: 1.25rem 1.25rem 0.25rem 1.25rem;
+  position: relative;
+}
+
+.chat-bubble-ai {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: var(--glass-border);
+  border-radius: 1.25rem 1.25rem 1.25rem 0.25rem;
+  position: relative;
+}
+
+.chat-bubble-ai.error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+}

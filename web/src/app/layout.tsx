@@ -77,6 +77,14 @@ export default function RootLayout({
       afterSignUpUrl="/dashboard"
     >
       <html lang="en" suppressHydrationWarning>
+        <head>
+          {/* Inline script to restore theme BEFORE paint — prevents white flash on refresh */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `(function(){try{var t=localStorage.getItem('prime-pentrix-theme');if(t)document.documentElement.setAttribute('data-theme',t);document.documentElement.style.colorScheme='dark'}catch(e){}})()`,
+            }}
+          />
+        </head>
         <body className={`${inter.variable} ${outfit.variable} font-sans antialiased min-h-screen`}>
           <ThemeProvider>
             <ReactQueryProvider>

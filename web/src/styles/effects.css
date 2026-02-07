@@ -1,0 +1,103 @@
+/* ═══════════════════════════════════════════════════════════════
+   TEXT & INTERACTIVE EFFECTS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Text gradients ── */
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-animated {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover), var(--color-accent));
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientFlow 4s ease infinite;
+}
+
+/* ── Card lift on hover ── */
+
+.card-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-lift:hover {
+  transform: translateY(-0.25rem) scale(1.02);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Gradient border animation ── */
+
+.border-gradient-animated {
+  position: relative;
+  border: 0.125rem solid transparent;
+  background-clip: padding-box;
+}
+
+.border-gradient-animated::before {
+  content: '';
+  position: absolute;
+  inset: -0.125rem;
+  z-index: -1;
+  background: linear-gradient(45deg, var(--color-accent), transparent, var(--color-accent));
+  background-size: 200% 200%;
+  border-radius: inherit;
+  animation: borderRotate 3s linear infinite;
+}
+
+/* ── Ripple effect on click ── */
+
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%) scale(0);
+  pointer-events: none;
+}
+
+.ripple-effect:active::after {
+  animation: ripple 0.6s ease-out;
+}
+
+/* ── Text shimmer ── */
+
+.text-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-foreground) 0%,
+    var(--color-accent) 50%,
+    var(--color-foreground) 100%
+  );
+  background-size: 1000px 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: textShimmer 3s linear infinite;
+}
+
+/* ── Particle background ── */
+
+.particle {
+  position: absolute;
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background: var(--color-accent);
+  animation: particleFloat var(--duration, 8s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}

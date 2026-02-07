@@ -1,0 +1,28 @@
+/* ═══════════════════════════════════════════════════════════════
+   PERFORMANCE OPTIMIZATIONS
+   GPU hints, containment, content-visibility
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Hidden tab panels should skip rendering entirely */
+[data-state="inactive"][role="tabpanel"] {
+  content-visibility: hidden;
+  contain-intrinsic-size: 0 31.25rem;
+}
+
+/* Active tab panels get layout containment for faster paint */
+[data-state="active"][role="tabpanel"] {
+  contain: layout style;
+}
+
+/* Promote scroll containers to GPU layers */
+.overflow-y-auto,
+.overflow-x-auto {
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Contain cards for faster layout calculations */
+.card-hover,
+.card-lift {
+  contain: layout style paint;
+}

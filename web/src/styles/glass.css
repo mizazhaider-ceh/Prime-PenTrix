@@ -1,0 +1,37 @@
+/* ═══════════════════════════════════════════════════════════════
+   GLASS MORPHISM SYSTEM
+   ═══════════════════════════════════════════════════════════════ */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: var(--glass-border);
+  contain: layout style;
+  will-change: transform;
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  contain: layout style;
+}
+
+.glass-subtle {
+  background: var(--glass-bg);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  contain: layout style;
+}
+
+.glow {
+  box-shadow: var(--shadow-glow);
+}
+
+.glow-border {
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  box-shadow: var(--shadow-glow), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}

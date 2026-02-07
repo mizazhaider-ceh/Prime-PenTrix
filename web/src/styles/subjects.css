@@ -1,0 +1,12 @@
+/* ═══════════════════════════════════════════════════════════════
+   SUBJECT ACCENT SYSTEM
+   ═══════════════════════════════════════════════════════════════ */
+
+.subject-glow-networks { --subject-color: #3b82f6; }
+.subject-glow-pentesting { --subject-color: #ef4444; }
+.subject-glow-backend { --subject-color: #22c55e; }
+.subject-glow-linux { --subject-color: #f59e0b; }
+.subject-glow-ctf { --subject-color: #8b5cf6; }
+.subject-glow-scripting { --subject-color: #06b6d4; }
+.subject-glow-privacy { --subject-color: #ec4899; }
+.subject-glow-ai-security { --subject-color: #f97316; }

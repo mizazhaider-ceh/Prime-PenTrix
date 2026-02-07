@@ -1,0 +1,108 @@
+/* ═══════════════════════════════════════════════════════════════
+   CLERK AUTH COMPONENT OVERRIDES — THEME-AWARE
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Fix Clerk modal visibility - ensure text is always readable */
+.cl-internal-b3fm6y,
+.cl-formButtonPrimary,
+.cl-footerActionLink,
+.cl-headerTitle,
+.cl-headerSubtitle,
+.cl-socialButtonsBlockButton,
+.cl-formFieldLabel,
+.cl-formFieldInput {
+  color: var(--foreground) !important;
+}
+
+.cl-card,
+.cl-modalContent,
+.cl-signIn-root,
+.cl-signUp-root {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.4) !important;
+}
+
+.cl-formButtonPrimary {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+.cl-formButtonPrimary:hover {
+  opacity: 0.9 !important;
+  transform: translateY(-1px) !important;
+}
+
+.cl-formFieldInput {
+  background: var(--background) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+.cl-formFieldInput:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1) !important;
+}
+
+.cl-dividerLine {
+  background: var(--border) !important;
+}
+
+.cl-dividerText {
+  color: var(--muted-foreground) !important;
+}
+
+.cl-footerActionLink {
+  color: var(--primary) !important;
+  font-weight: 600 !important;
+}
+
+.cl-footerActionLink:hover {
+  text-decoration: underline !important;
+}
+
+.cl-socialButtonsBlockButton {
+  background: var(--background) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+.cl-socialButtonsBlockButton:hover {
+  background: var(--muted) !important;
+}
+
+.cl-modalBackdrop {
+  backdrop-filter: blur(8px) !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+}
+
+.cl-headerTitle {
+  font-family: var(--font-outfit), sans-serif !important;
+  font-weight: 700 !important;
+  color: var(--foreground) !important;
+}
+
+.cl-headerSubtitle {
+  color: var(--muted-foreground) !important;
+}
+
+/* User button with theme awareness */
+.cl-userButtonPopoverCard {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.4) !important;
+}
+
+.cl-userButtonPopoverActionButton {
+  color: var(--foreground) !important;
+}
+
+.cl-userButtonPopoverActionButton:hover {
+  background: var(--muted) !important;
+}
+
+.cl-userButtonPopoverFooter {
+  border-top: 1px solid var(--border) !important;
+}

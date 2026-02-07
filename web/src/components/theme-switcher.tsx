@@ -28,6 +28,14 @@ const themes = [
 export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme();
 
+  const handleThemeChange = (newTheme: string) => {
+    // Enable smooth transitions during theme switch
+    document.documentElement.classList.add('theme-transitioning');
+    setTheme(newTheme);
+    // Remove after transition completes
+    setTimeout(() => document.documentElement.classList.remove('theme-transitioning'), 350);
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -44,7 +52,7 @@ export function ThemeSwitcher() {
           {themes.map((t) => (
             <DropdownMenuItem
               key={t.value}
-              onClick={() => setTheme(t.value)}
+              onClick={() => handleThemeChange(t.value)}
               className={`rounded-lg px-2.5 py-2 text-xs cursor-pointer transition-all ${
                 theme === t.value
                   ? 'bg-primary/15 text-primary font-medium'
