@@ -31,10 +31,24 @@ export async function GET(req: NextRequest) {
     if (subjectId) where.subjectId = subjectId;
     if (mode) where.mode = mode;
     if (search) {
-      where.title = {
-        contains: search,
-        mode: 'insensitive',
-      };
+      where.OR = [
+        {
+          title: {
+            contains: search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          messages: {
+            some: {
+              content: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            },
+          },
+        },
+      ];
     }
 
     // Apply time filter
