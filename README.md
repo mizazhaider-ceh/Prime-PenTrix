@@ -697,3 +697,11 @@ This project is licensed under the MIT License.
 *Prime PenTrix — Where Penetration Testing Meets Intelligence*
 
 </div>
+
+<div align="center">
+
+
+![Visitors](https://api.visitorbadge.io/api/visitors?path=mizazhaider-ceh%2FX-Recon&label=Visitors&countColor=%2300f3ff)
+
+</div>
+
